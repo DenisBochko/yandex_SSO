@@ -1,0 +1,6 @@
+env: "local" # prod
+storage_path: "./storage/sso.db"
+token_ttl: 1h # время жизни токена
+grpc:
+  port: 50051
+  timeout: 5s # время обработки запроса 
