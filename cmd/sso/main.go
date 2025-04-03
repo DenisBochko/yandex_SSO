@@ -1,6 +1,10 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+	"yandex-sso/internal/app"
 	"yandex-sso/internal/config"
 	"yandex-sso/pkg/logger"
 
@@ -8,16 +12,27 @@ import (
 )
 
 func main() {
+	// кофигурация
 	cfg := config.MustLoad()
 
+	// инициализация логгера
 	logger := logger.SetupLogger(cfg.Env)
 	defer logger.Sync()
 
 	logger.Info("Starting SSO service",
-		zap.Any("config", cfg),
+		zap.String("Environment", cfg.Env),
 	)
 
-	logger.Debug("Debug message")
-	// logger.Error("Error message",)
-	// logger.Warn("Warning message",)
+	// инициализация приложения и его запуск
+	application := app.New(logger, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+
+	go application.GRPCServer.Run()
+
+	// graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	<-stop
+	application.GRPCServer.Stop()
+	logger.Info("application stopped")
 }
