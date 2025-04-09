@@ -33,6 +33,10 @@ func main() {
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 
 	<-stop
+
+	logger.Info("Stopping SSO service...")
+
 	application.GRPCServer.Stop()
-	logger.Info("application stopped")
+
+	logger.Info("SSO service stopped")
 }
