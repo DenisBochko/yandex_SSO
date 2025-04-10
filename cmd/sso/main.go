@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"context"
 	"os/signal"
 	"syscall"
 	"yandex-sso/internal/app"
@@ -12,6 +12,12 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
+	// Обработка сигналов завершения
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	// кофигурация
 	cfg := config.MustLoad()
 
@@ -24,16 +30,12 @@ func main() {
 	)
 
 	// инициализация приложения и его запуск
-	application := app.New(logger, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
-
+	application := app.New(ctx, logger, cfg.GRPC.Port, cfg.JWTTokenTTL, cfg.Postgres)
 	go application.GRPCServer.Run()
 
 	// graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
-
-	<-stop
-
+	// Ожидаем сигнал завершения
+	<-ctx.Done()
 	logger.Info("Stopping SSO service...")
 
 	application.GRPCServer.Stop()

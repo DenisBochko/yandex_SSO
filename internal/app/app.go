@@ -1,10 +1,12 @@
 package app
 
 import (
+	"context"
 	"time"
 	grpcapp "yandex-sso/internal/app/grpc"
 	"yandex-sso/internal/services/auth"
-	"yandex-sso/internal/storage/sqlite"
+	postgresql "yandex-sso/internal/storage/postgres"
+	"yandex-sso/pkg/postgres"
 
 	"go.uber.org/zap"
 )
@@ -13,17 +15,26 @@ type App struct {
 	GRPCServer *grpcapp.App
 }
 
-func New(log *zap.Logger, grpcPort int, storagePath string, tokenTTl time.Duration) *App {
-	storage, err := sqlite.New(storagePath)
+func New(ctx context.Context, log *zap.Logger, grpcPort int, tokenTTl time.Duration, postgresCfg postgres.PostgresCfg) *App {
+	// Подключение к БД
+	conn, err := postgres.New(ctx, postgresCfg)
+
 	if err != nil {
-		log.Fatal("failed to create storage", zap.Error(err))
+		log.Info("failed to connect to database", zap.Error(err))
+		return nil
 	}
 
-	authService := auth.New(log, storage, storage, storage, tokenTTl)
-	if err != nil {
-		log.Fatal("failed to create auth service", zap.Error(err))
+	if conn.Ping(ctx) != nil {
+		log.Info("failed to ping database", zap.Error(err))
+		return nil
 	}
 
+	postgresStorage := postgresql.New(conn)
+	// Создаём новый экземпляр сервиса аутентификации
+	authService := auth.New(log, postgresStorage, tokenTTl)
+
+	// Создаём новый gRPC сервер
+	// и регистрируем в нём сервис аутентификации
 	grpcApp := grpcapp.New(log, authService, grpcPort)
 
 	return &App{

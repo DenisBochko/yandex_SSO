@@ -4,3 +4,14 @@ token_ttl: 1h # время жизни токена
 grpc:
   port: 50051
   timeout: 5s # время обработки запроса 
+
+POSTGRES:
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: admin
+  POSTGRES_PASS: admin
+  POSTGRES_DB: test_db
+  POSTGRES_SSLMODE: disable
+
+  POSTGRES_MAX_CONN: 10
+  POSTGRES_MIN_CONN: 5

@@ -16,43 +16,26 @@ import (
 // Сервисный слой
 
 type Auth struct {
-	log         *zap.Logger
-	usrSaver    UserSaver
-	usrProvider UserProvider
-	appProvider AppProvider
-	tokenTTL    time.Duration
+	log      *zap.Logger
+	storage  Storage
+	tokenTTL time.Duration
 }
 
-type UserStorage interface {
+type Storage interface {
 	SaveUser(ctx context.Context, email string, passHash []byte) (uid int64, err error)
 	User(ctx context.Context, email string) (models.User, error)
-}
-
-type UserSaver interface {
-	SaveUser(ctx context.Context, email string, passHash []byte) (uid int64, err error)
-}
-
-type UserProvider interface {
-	User(ctx context.Context, email string) (models.User, error)
-}
-
-type AppProvider interface {
 	App(ctx context.Context, appID int) (models.App, error)
 }
 
 func New(
 	log *zap.Logger,
-	userSaver UserSaver,
-	userProvider UserProvider,
-	appProvider AppProvider,
+	storage Storage,
 	tokenTTL time.Duration,
 ) *Auth {
 	return &Auth{
-		usrSaver:    userSaver,
-		usrProvider: userProvider,
-		log:         log,
-		appProvider: appProvider,
-		tokenTTL:    tokenTTL, // Время жизни возвращаемых токенов
+		log:      log,
+		storage:  storage,
+		tokenTTL: tokenTTL, // Время жизни возвращаемых токенов
 	}
 }
 
@@ -70,13 +53,12 @@ func (a *Auth) Login(ctx context.Context, email string, password string, appID i
 	log.Info("Attempting to login user")
 
 	// Достаем пользователя из БД
-	user, err := a.usrProvider.User(ctx, email)
+	user, err := a.storage.User(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			log.Warn("user not found", zap.Error(err))
 			return "", fmt.Errorf("user not found: %w", ErrInvalidCredentials)
 		}
-
 		log.Error("failed to get user", zap.Error(err))
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
@@ -124,14 +106,14 @@ func (a *Auth) Register(ctx context.Context, email string, pass string) (int64, 
 	}
 
 	// Сохраняем пользователя в БД
-	id, err := a.usrSaver.SaveUser(ctx, email, passHash)
+	id, err := a.storage.SaveUser(ctx, email, passHash)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
-			log.Warn("user already exists", zap.Error(err))
-			return 0, fmt.Errorf("user already exists: %w", storage.ErrUserExists)
+			log.Info("user already exists", zap.Error(err))
+			return 0, storage.ErrUserExists
 		}
 
-		log.Error("failed to save user", zap.Error(err))
+		log.Info("failed to save user", zap.Error(err))
 		return 0, fmt.Errorf("failed to save user: %w", err)
 	}
 

@@ -3,7 +3,7 @@ package grpcapp
 import (
 	"fmt"
 	"net"
-	authgrpc "yandex-sso/internal/grpcHandlers/auth"
+	grpcHandlersAuth "yandex-sso/internal/grpcHandlers/auth"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -16,9 +16,9 @@ type App struct {
 }
 
 // Создаём новый gRPC сервер
-func New(log *zap.Logger, authService authgrpc.Auth, port int) *App {
+func New(log *zap.Logger, authService grpcHandlersAuth.Auth, port int) *App {
 	gRPCServer := grpc.NewServer()
-	authgrpc.Register(gRPCServer, authService)
+	grpcHandlersAuth.Register(gRPCServer, authService)
 
 	return &App{
 		log:        log,

@@ -3,8 +3,8 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"yandex-sso/internal/services/auth"
+	"yandex-sso/internal/storage"
 
 	ssov1 "github.com/DenisBochko/yandex_contracts/gen/go/sso"
 	"google.golang.org/grpc"
@@ -46,7 +46,7 @@ func (s *serverAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 
 	userID, err := s.auth.Register(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		if errors.Is(err, auth.ErrInvalidCredentials) {
+		if errors.Is(err, storage.ErrUserExists) {
 			return nil, status.Error(codes.AlreadyExists, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
@@ -72,9 +72,6 @@ func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.
 
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
 
-	fmt.Println("token", token)
-	fmt.Println("err", err)
-	
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.Unauthenticated, err.Error())
