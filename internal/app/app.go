@@ -15,7 +15,7 @@ type App struct {
 	GRPCServer *grpcapp.App
 }
 
-func New(ctx context.Context, log *zap.Logger, grpcPort int, tokenTTl time.Duration, postgresCfg postgres.PostgresCfg) *App {
+func New(ctx context.Context, log *zap.Logger, grpcPort int, tokenTTl time.Duration, appSecret string, postgresCfg postgres.PostgresCfg) *App {
 	// Подключение к БД
 	conn, err := postgres.New(ctx, postgresCfg)
 
@@ -31,7 +31,7 @@ func New(ctx context.Context, log *zap.Logger, grpcPort int, tokenTTl time.Durat
 
 	postgresStorage := postgresql.New(conn)
 	// Создаём новый экземпляр сервиса аутентификации
-	authService := auth.New(log, postgresStorage, tokenTTl)
+	authService := auth.New(log, postgresStorage, tokenTTl, appSecret)
 
 	// Создаём новый gRPC сервер
 	// и регистрируем в нём сервис аутентификации

@@ -10,11 +10,16 @@ import (
 )
 
 type Config struct {
-	Env             string               `yaml:"env" env-default:"local"`
-	JWTTokenTTL     time.Duration        `yaml:"jwt_token_ttl" env-required:"true"`
-	REFRESHTokenTTL time.Duration        `yaml:"refresh_token_ttl" env-required:"true"`
-	GRPC            GRPCConfig           `yaml:"grpc"`
-	Postgres        postgres.PostgresCfg `yaml:"postgres"`
+	Env      string               `yaml:"env" env-default:"local"`
+	Jwt      JwtConfig            `yaml:"jwt"`
+	GRPC     GRPCConfig           `yaml:"grpc"`
+	Postgres postgres.PostgresCfg `yaml:"postgres"`
+}
+
+type JwtConfig struct {
+	AppSecret       string        `yaml:"app_secret" env-required:"true"`
+	AccessTokenTTL  time.Duration `yaml:"access_token_ttl" env-required:"true"`
+	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl" env-required:"true"`
 }
 
 type GRPCConfig struct {

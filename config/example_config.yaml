@@ -1,6 +1,10 @@
 env: "local" # prod
-storage_path: "./storage/sso.db"
-token_ttl: 1h # время жизни токена
+
+jwt:
+  app_secret:  # секретный ключ для шифрования токенов
+  access_token_ttl: 15m # время жизни access токена
+  refresh_token_ttl: 30d # время жизни refresh токена
+
 grpc:
   port: 50051
   timeout: 5s # время обработки запроса 

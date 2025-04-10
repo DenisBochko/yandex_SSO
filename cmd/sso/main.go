@@ -30,7 +30,7 @@ func main() {
 	)
 
 	// инициализация приложения и его запуск
-	application := app.New(ctx, logger, cfg.GRPC.Port, cfg.JWTTokenTTL, cfg.Postgres)
+	application := app.New(ctx, logger, cfg.GRPC.Port, cfg.Jwt.AccessTokenTTL,cfg.Jwt.AppSecret, cfg.Postgres)
 	go application.GRPCServer.Run()
 
 	// graceful shutdown

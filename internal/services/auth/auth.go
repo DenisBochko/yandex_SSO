@@ -16,9 +16,10 @@ import (
 // Сервисный слой
 
 type Auth struct {
-	log      *zap.Logger
-	storage  Storage
-	tokenTTL time.Duration
+	log       *zap.Logger
+	storage   Storage
+	tokenTTL  time.Duration
+	appSecret string
 }
 
 type Storage interface {
@@ -31,11 +32,13 @@ func New(
 	log *zap.Logger,
 	storage Storage,
 	tokenTTL time.Duration,
+	appSecret string,
 ) *Auth {
 	return &Auth{
-		log:      log,
-		storage:  storage,
-		tokenTTL: tokenTTL, // Время жизни возвращаемых токенов
+		log:       log,
+		storage:   storage,
+		tokenTTL:  tokenTTL, // Время жизни возвращаемых токенов
+		appSecret: appSecret,
 	}
 }
 
@@ -69,21 +72,10 @@ func (a *Auth) Login(ctx context.Context, email string, password string, appID i
 		return "", fmt.Errorf("invalid credentials: %w", ErrInvalidCredentials)
 	}
 
-	// Получаем информацию о приложении
-	// app, err := a.appProvider.App(ctx, appID)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to get app: %w", err)
-	// }
-	app := models.App{
-		ID:     appID,
-		Name:   "test",
-		Secret: "test",
-	}
-
 	log.Info("user logged in successfully", zap.Int("userID", int(user.ID)))
 
 	// Создаем токен авторизации
-	token, err := jwt.NewToken(user, app, a.tokenTTL)
+	token, err := jwt.NewToken(user, a.appSecret, a.tokenTTL)
 	if err != nil {
 		log.Error("failed to create token", zap.Error(err))
 		return "", fmt.Errorf("failed to create token: %w", err)
@@ -118,18 +110,4 @@ func (a *Auth) Register(ctx context.Context, email string, pass string) (int64, 
 	}
 
 	return id, nil
-}
-
-// TODO: реализовать проверку прав администратора
-func (a *Auth) IsAdmin(ctx context.Context, userID int) (bool, error) {
-	// log := a.log.With(zap.Int("userID", userID))
-	// log.Info("Checking if user is admin")
-
-	// isAdmin, err := a.usrProvider.IsAdmin(ctx, userID)
-	// if err != nil {
-	// 	log.Error("failed to get user", zap.Error(err))
-	// 	return false, fmt.Errorf("failed to get user: %w", err)
-	// }
-
-	return false, nil
 }
