@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:15
+    container_name: database
+    environment:
+      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: admin
+      POSTGRES_DB: test_db
+    ports:
+      - "5432:5432"
+    # если база упала с ошибкой, то мы её перезапускаем
+    restart: always
+
+    volumes:
+      - postgres:/data/postgres
+
+    # это проверка базы данных, команда дёргает postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres:
