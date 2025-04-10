@@ -14,17 +14,15 @@ import (
 
 // Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 // Login(context.Context, *LoginRequest) (*LoginResponse, error)
-// IsAdmin(context.Context, *IsAdminRequest) (*IsAdminResponse, error)
+// RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
+// GetUserById(context.Context, *GetUserByIdRequest) (*GetUserByIdResponse, error)
+// GetUsers(context.Context, *GetUsersRequest) (*GetUsersResponse, error)
+
 
 type Auth interface {
 	Login(ctx context.Context, email string, password string, appID int) (string, error)
 	Register(ctx context.Context, email string, password string) (int64, error)
-	IsAdmin(ctx context.Context, userID int) (bool, error)
 }
-
-const (
-	emptyValue = 0
-)
 
 type serverAPI struct {
 	ssov1.UnimplementedAuthServer
@@ -66,11 +64,7 @@ func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	if req.GetAppId() == emptyValue {
-		return nil, status.Error(codes.InvalidArgument, "app_id is required")
-	}
-
-	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
+	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(-1))
 
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
@@ -80,22 +74,19 @@ func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.
 	}
 
 	return &ssov1.LoginResponse{
-		Token: token,
+		AccessToken: token,
+		RefreshToken: token,
 	}, nil
 }
 
-func (s *serverAPI) IsAdmin(ctx context.Context, req *ssov1.IsAdminRequest) (*ssov1.IsAdminResponse, error) {
-	if req.GetUserId() == emptyValue {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
-	}
+func (s *serverAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
 
-	isAdmin, err := s.auth.IsAdmin(ctx, int(req.GetUserId()))
-	if err != nil {
-		// TODO
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+func (s *serverAPI) GetUserById(ctx context.Context, req *ssov1.GetUserByIdRequest) (*ssov1.GetUserByIdResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
 
-	return &ssov1.IsAdminResponse{
-		IsAdmin: isAdmin,
-	}, nil
+func (s *serverAPI) GetUsers(ctx context.Context, req *ssov1.GetUsersRequest) (*ssov1.GetUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
