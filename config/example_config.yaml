@@ -1,9 +1,10 @@
 env: "local" # prod
 
 jwt:
-  app_secret:  # секретный ключ для шифрования токенов
+  app_secret_a:  # секретный ключ для шифрования access токенов
+  app_secret_b:  # секретный ключ для шифрования refresh токенов
   access_token_ttl: 15m # время жизни access токена
-  refresh_token_ttl: 30d # время жизни refresh токена
+  refresh_token_ttl: 720h # время жизни refresh токена
 
 grpc:
   port: 50051
