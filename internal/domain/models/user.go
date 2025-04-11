@@ -1,7 +1,10 @@
 package models
 
 type User struct {
-	ID int64
-	Email string
+	ID       string
+	Name     string
+	Email    string
 	PassHash []byte
+	Verified bool
+	Avatar   *string
 }
