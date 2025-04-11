@@ -17,9 +17,10 @@ type Config struct {
 }
 
 type JwtConfig struct {
-	AppSecret       string        `yaml:"app_secret" env-required:"true"`
-	AccessTokenTTL  time.Duration `yaml:"access_token_ttl" env-required:"true"`
-	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl" env-required:"true"`
+	AppSecretAccessToken  string        `yaml:"app_secret_a" env-required:"true"`
+	AppSecretRefreshToken string        `yaml:"app_secret_b" env-required:"true"`
+	AccessTokenTTL        time.Duration `yaml:"access_token_ttl" env-required:"true"`
+	RefreshTokenTTL       time.Duration `yaml:"refresh_token_ttl" env-required:"true"`
 }
 
 type GRPCConfig struct {

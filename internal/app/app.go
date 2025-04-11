@@ -2,22 +2,24 @@ package app
 
 import (
 	"context"
-	"time"
 	grpcapp "yandex-sso/internal/app/grpc"
+	"yandex-sso/internal/config"
 	"yandex-sso/internal/services/auth"
 	postgresql "yandex-sso/internal/storage/postgres"
 	"yandex-sso/pkg/postgres"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 type App struct {
 	GRPCServer *grpcapp.App
+	dbConn     *pgxpool.Pool
 }
 
-func New(ctx context.Context, log *zap.Logger, grpcPort int, tokenTTl time.Duration, appSecret string, postgresCfg postgres.PostgresCfg) *App {
+func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 	// Подключение к БД
-	conn, err := postgres.New(ctx, postgresCfg)
+	conn, err := postgres.New(ctx, cfg.Postgres)
 
 	if err != nil {
 		log.Info("failed to connect to database", zap.Error(err))
@@ -31,13 +33,19 @@ func New(ctx context.Context, log *zap.Logger, grpcPort int, tokenTTl time.Durat
 
 	postgresStorage := postgresql.New(conn)
 	// Создаём новый экземпляр сервиса аутентификации
-	authService := auth.New(log, postgresStorage, tokenTTl, appSecret)
+	authService := auth.New(log, postgresStorage, &cfg.Jwt)
 
 	// Создаём новый gRPC сервер
 	// и регистрируем в нём сервис аутентификации
-	grpcApp := grpcapp.New(log, authService, grpcPort)
+	grpcApp := grpcapp.New(log, authService, cfg.GRPC.Port)
 
 	return &App{
 		GRPCServer: grpcApp,
+		dbConn:     conn,
 	}
+}
+
+func (a *App) Stop() {
+	a.GRPCServer.Stop()
+	a.dbConn.Close()
 }

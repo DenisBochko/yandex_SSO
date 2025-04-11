@@ -20,28 +20,35 @@ func New(db *pgxpool.Pool) *Storage {
 }
 
 // SaveUser сохраняет пользователя в БД
-func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
-	var id int64
+func (s *Storage) SaveUser(ctx context.Context, name string, email string, passHash []byte) (string, error) {
+	var id string
 
-	err := s.db.QueryRow(ctx, "INSERT INTO users(email, pass_hash) VALUES($1, $2) RETURNING id", email, passHash).Scan(&id)
+	err := s.db.QueryRow(ctx, "INSERT INTO users(name, email, pass_hash) VALUES($1, $2, $3) RETURNING id", name, email, passHash).Scan(&id)
 	if pgErr, ok := err.(*pgconn.PgError); ok {
 		switch pgErr.Code {
 		case "23505":
-			return -1, storage.ErrUserExists
+			return "", storage.ErrUserExists
 		default:
-			return -1, fmt.Errorf("failed to get user: %w", err)
+			return "", fmt.Errorf("failed to get user: %w", err)
 		}
 	}
-	
+
 	return id, nil
 }
 
-// User returns user by email
+// User возвращает пользователя по email
 func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 	var user models.User
 
-	err := s.db.QueryRow(ctx, "SELECT id, email, pass_hash FROM users WHERE email = $1",
-		email).Scan(&user.ID, &user.Email, &user.PassHash)
+	err := s.db.QueryRow(ctx, "SELECT id, name, email, pass_hash, verify, avatar FROM users WHERE email = $1",
+		email).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.PassHash,
+		&user.Verified,
+		&user.Avatar,
+	)
 
 	if pgErr, ok := err.(*pgconn.PgError); ok {
 		switch pgErr.Code {
@@ -56,6 +63,28 @@ func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 	return user, nil
 }
 
-func (s *Storage) App(ctx context.Context, id int) (models.App, error) {
-	return models.App{}, fmt.Errorf("not implemented")
+// Users возвращает пользователей по списку id
+func (s *Storage) Users(ctx context.Context, ids []string) ([]models.User, error) {
+	var users []models.User
+
+	rows, err := s.db.Query(ctx, "SELECT id, name, email, pass_hash, verify, avatar FROM users WHERE id = ANY($1)", ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get users: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var user models.User
+		// НЕ ДОБАВЛЯЕМ АВАТАР
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.PassHash, &user.Verified, &user.Avatar); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate over users: %w", err)
+	}
+
+	return users, nil
 }

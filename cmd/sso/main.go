@@ -30,7 +30,7 @@ func main() {
 	)
 
 	// инициализация приложения и его запуск
-	application := app.New(ctx, logger, cfg.GRPC.Port, cfg.Jwt.AccessTokenTTL,cfg.Jwt.AppSecret, cfg.Postgres)
+	application := app.New(ctx, logger, cfg)
 	go application.GRPCServer.Run()
 
 	// graceful shutdown
@@ -38,7 +38,7 @@ func main() {
 	<-ctx.Done()
 	logger.Info("Stopping SSO service...")
 
-	application.GRPCServer.Stop()
+	application.Stop()
 
 	logger.Info("SSO service stopped")
 }

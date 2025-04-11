@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"yandex-sso/internal/domain/models"
 	"yandex-sso/internal/services/auth"
 	"yandex-sso/internal/storage"
 
@@ -18,10 +20,12 @@ import (
 // GetUserById(context.Context, *GetUserByIdRequest) (*GetUserByIdResponse, error)
 // GetUsers(context.Context, *GetUsersRequest) (*GetUsersResponse, error)
 
-
 type Auth interface {
-	Login(ctx context.Context, email string, password string, appID int) (string, error)
-	Register(ctx context.Context, email string, password string) (int64, error)
+	Login(ctx context.Context, email string, password string) (string, string, error)
+	Register(ctx context.Context, name string, email string, password string) (string, error)
+	RefreshToken(ctx context.Context, token string) (string, error)
+	// GetUserById(ctx context.Context, id string) (string, error)
+	GetUsers(ctx context.Context, ids []string) ([]models.User, error)
 }
 
 type serverAPI struct {
@@ -42,7 +46,7 @@ func (s *serverAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	userID, err := s.auth.Register(ctx, req.GetEmail(), req.GetPassword())
+	userID, err := s.auth.Register(ctx, req.GetUsername(), req.GetEmail(), req.GetPassword())
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			return nil, status.Error(codes.AlreadyExists, err.Error())
@@ -51,7 +55,7 @@ func (s *serverAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 	}
 
 	return &ssov1.RegisterResponse{
-		UserId: int64(userID),
+		UserId: userID,
 	}, nil
 }
 
@@ -64,7 +68,7 @@ func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(-1))
+	accessToken, refreshToken, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
 
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
@@ -74,13 +78,28 @@ func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.
 	}
 
 	return &ssov1.LoginResponse{
-		AccessToken: token,
-		RefreshToken: token,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
 func (s *serverAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if req.GetAccessToken() == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
+	}
+
+	accessToken, err := s.auth.RefreshToken(ctx, req.GetAccessToken())
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.Unauthenticated, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &ssov1.RefreshTokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: req.GetAccessToken(), // возвращаем такой же refresh token
+	}, nil
 }
 
 func (s *serverAPI) GetUserById(ctx context.Context, req *ssov1.GetUserByIdRequest) (*ssov1.GetUserByIdResponse, error) {
@@ -88,5 +107,31 @@ func (s *serverAPI) GetUserById(ctx context.Context, req *ssov1.GetUserByIdReque
 }
 
 func (s *serverAPI) GetUsers(ctx context.Context, req *ssov1.GetUsersRequest) (*ssov1.GetUsersResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if len(req.GetUserIds()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "ids is required")
+	}
+
+	fmt.Println("GetUsers", req.GetUserIds())
+
+	users, err := s.auth.GetUsers(ctx, req.GetUserIds())
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var userResponses []*ssov1.User
+	for _, user := range users {
+		userResponses = append(userResponses,
+			&ssov1.User{
+				UserId: user.ID,
+				Name:   user.Name,
+				Email:  user.Email,
+			})
+	}
+
+	return &ssov1.GetUsersResponse{
+		Users: userResponses,
+	}, nil
 }
