@@ -1,4 +1,16 @@
 services:
+  minio:
+      image: minio/minio
+      container_name: minio
+      ports:
+        - "9000:9000"      # API
+        - "9001:9001"      # Web UI
+      volumes:
+        - ./data:/data
+      environment:
+        MINIO_ROOT_USER: minio
+        MINIO_ROOT_PASSWORD: minio123
+      command: server --console-address ":9001" /data
   db:
     image: postgres:15
     container_name: database
