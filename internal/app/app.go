@@ -5,6 +5,7 @@ import (
 	grpcapp "yandex-sso/internal/app/grpc"
 	"yandex-sso/internal/config"
 	"yandex-sso/internal/services/auth"
+	"yandex-sso/internal/services/users"
 	postgresql "yandex-sso/internal/storage/postgres"
 	"yandex-sso/pkg/postgres"
 
@@ -14,7 +15,7 @@ import (
 
 type App struct {
 	GRPCServer *grpcapp.App
-	log *zap.Logger
+	log        *zap.Logger
 	dbConn     *pgxpool.Pool
 }
 
@@ -36,9 +37,12 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 	// Создаём новый экземпляр сервиса аутентификации
 	authService := auth.New(log, postgresStorage, &cfg.Jwt)
 
+	// Создаём новый экземпляр сервиса пользователей
+	userService := users.New(log, postgresStorage, &cfg.Jwt)
+
 	// Создаём новый gRPC сервер
 	// и регистрируем в нём сервис аутентификации
-	grpcApp := grpcapp.New(log, authService, cfg.GRPC.Port)
+	grpcApp := grpcapp.New(log, authService, userService, cfg.GRPC.Port)
 
 	return &App{
 		GRPCServer: grpcApp,
@@ -49,7 +53,7 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 
 func (a *App) Stop() {
 	a.GRPCServer.Stop()
-	
+
 	a.log.Info("stopping database connection")
 	a.dbConn.Close()
 }

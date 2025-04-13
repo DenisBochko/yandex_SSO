@@ -3,8 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
-	"yandex-sso/internal/domain/models"
 	"yandex-sso/internal/services/auth"
 	"yandex-sso/internal/storage"
 
@@ -14,30 +12,23 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-// Login(context.Context, *LoginRequest) (*LoginResponse, error)
-// RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
-// GetUserById(context.Context, *GetUserByIdRequest) (*GetUserByIdResponse, error)
-// GetUsers(context.Context, *GetUsersRequest) (*GetUsersResponse, error)
-
 type Auth interface {
 	Login(ctx context.Context, email string, password string) (string, string, error)
 	Register(ctx context.Context, name string, email string, password string) (string, error)
 	RefreshToken(ctx context.Context, token string) (string, error)
-	// GetUserById(ctx context.Context, id string) (string, error)
-	GetUsers(ctx context.Context, ids []string) ([]models.User, error)
+	Verify(ctx context.Context, token string) (bool, error)
 }
 
-type serverAPI struct {
+type AuthServerAPI struct {
 	ssov1.UnimplementedAuthServer
 	auth Auth
 }
 
 func Register(gRPC *grpc.Server, auth Auth) {
-	ssov1.RegisterAuthServer(gRPC, &serverAPI{auth: auth})
+	ssov1.RegisterAuthServer(gRPC, &AuthServerAPI{auth: auth})
 }
 
-func (s *serverAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
+func (s *AuthServerAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
 	if req.GetEmail() == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
@@ -59,7 +50,7 @@ func (s *serverAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 	}, nil
 }
 
-func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
+func (s *AuthServerAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
 	if req.GetEmail() == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
@@ -83,7 +74,7 @@ func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.
 	}, nil
 }
 
-func (s *serverAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
+func (s *AuthServerAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
 	if req.GetAccessToken() == "" {
 		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
 	}
@@ -102,36 +93,6 @@ func (s *serverAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenReq
 	}, nil
 }
 
-func (s *serverAPI) GetUserById(ctx context.Context, req *ssov1.GetUserByIdRequest) (*ssov1.GetUserByIdResponse, error) {
+func (s *AuthServerAPI) Verify(ctx context.Context, req *ssov1.VerifyRequest) (*ssov1.VerifyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (s *serverAPI) GetUsers(ctx context.Context, req *ssov1.GetUsersRequest) (*ssov1.GetUsersResponse, error) {
-	if len(req.GetUserIds()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "ids is required")
-	}
-
-	fmt.Println("GetUsers", req.GetUserIds())
-
-	users, err := s.auth.GetUsers(ctx, req.GetUserIds())
-	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var userResponses []*ssov1.User
-	for _, user := range users {
-		userResponses = append(userResponses,
-			&ssov1.User{
-				UserId: user.ID,
-				Name:   user.Name,
-				Email:  user.Email,
-			})
-	}
-
-	return &ssov1.GetUsersResponse{
-		Users: userResponses,
-	}, nil
 }

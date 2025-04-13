@@ -3,7 +3,7 @@ module yandex-sso
 go 1.23.1
 
 require (
-	github.com/DenisBochko/yandex_contracts v0.0.9
+	github.com/DenisBochko/yandex_contracts v0.0.11
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/ilyakaznacheev/cleanenv v1.5.0

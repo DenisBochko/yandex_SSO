@@ -24,7 +24,6 @@ type Auth struct {
 type Storage interface {
 	SaveUser(ctx context.Context, name string, email string, passHash []byte) (uid string, err error)
 	User(ctx context.Context, email string) (models.User, error)
-	Users(ctx context.Context, ids []string) ([]models.User, error)
 }
 
 func New(
@@ -136,15 +135,6 @@ func (a *Auth) RefreshToken(ctx context.Context, token string) (string, error) {
 	return newAccessToken, nil
 }
 
-func (a *Auth) GetUsers(ctx context.Context, ids []string) ([]models.User, error) {
-	log := a.log.With(zap.String("ids", fmt.Sprintf("%v", ids)))
-	log.Info("Getting users")
-
-	users, err := a.storage.Users(ctx, ids)
-	if err != nil {
-		log.Error("failed to get users", zap.Error(err))
-		return nil, fmt.Errorf("failed to get users: %w", err)
-	}
-
-	return users, nil
+func (a *Auth) Verify(ctx context.Context, token string) (bool, error) {
+	return true, nil
 }
