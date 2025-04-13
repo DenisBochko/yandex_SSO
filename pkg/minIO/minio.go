@@ -15,14 +15,14 @@ type MinioConfig struct {
 	AccessKey string `yaml:"MINIO_USER" env-required:"true"`
 	SecretKey string `yaml:"MINIO_PASS" env-required:"true"`
 	Bucket    string `yaml:"MINIO_BUCKET" env-required:"true"`
-	Sslmode   bool `yaml:"MINIO_SSLMODE" env-required:"true"`
+	Sslmode   bool   `yaml:"MINIO_SSLMODE" env-required:"true"`
 }
 
 func New(ctx context.Context, log *zap.Logger, cfg MinioConfig) (*minio.Client, error) {
 	endpoint := fmt.Sprintf("%s:%s", cfg.Endpoint, cfg.Port)
 	accessKeyID := cfg.AccessKey
 	secretAccessKey := cfg.SecretKey
-	useSSL := cfg.Sslmode
+	useSSL := false
 
 	// Инициализируем новый клиент MinIO
 	minioClient, err := minio.New(endpoint, &minio.Options{
@@ -31,6 +31,7 @@ func New(ctx context.Context, log *zap.Logger, cfg MinioConfig) (*minio.Client, 
 	})
 
 	if err != nil {
+		log.Error("failed to create MinIO client", zap.Error(err))
 		return nil, fmt.Errorf("unable to connect to MinIO: %w", err)
 	}
 
@@ -47,9 +48,9 @@ func New(ctx context.Context, log *zap.Logger, cfg MinioConfig) (*minio.Client, 
 		} else {
 			return nil, fmt.Errorf("failed to create bucket: %w", err)
 		}
-	} else {
-		log.Info("Successfully created", zap.String("bucket", bucketName))
 	}
+
+	log.Info("Successfully created minIO", zap.String("bucket", bucketName))
 
 	return minioClient, nil
 }

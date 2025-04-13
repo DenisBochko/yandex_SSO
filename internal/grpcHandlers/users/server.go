@@ -17,6 +17,7 @@ type UsersService interface {
 	GetUserById(ctx context.Context, id string) (models.User, error)
 	UpdateUser(ctx context.Context, user models.User) (bool, error)
 	DeleteUser(ctx context.Context, id string) (bool, error)
+	UploadPhoto(ctx context.Context, id string, photo []byte, contentType string, fileName string) (string, error)
 }
 
 type UsersServerAPI struct {
@@ -91,13 +92,18 @@ func (s *UsersServerAPI) UpdateUser(ctx context.Context, req *ssov1.UpdateUserRe
 		return nil, status.Error(codes.InvalidArgument, "UserId is required")
 	}
 
-	user := models.User{
-		ID:    req.GetUserId(),
-		Name:  req.GetName(),
-		Email: req.GetEmail(),
+	user, err := s.userService.GetUserById(ctx, req.GetUserId())
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	_, err := s.userService.UpdateUser(ctx, user)
+	user.Name = req.GetName()
+	user.Email = req.GetEmail()
+
+	_, err = s.userService.UpdateUser(ctx, user)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -133,5 +139,41 @@ func (s *UsersServerAPI) DeleteUser(ctx context.Context, req *ssov1.DeleteUserRe
 }
 
 func (s *UsersServerAPI) UploadPhoto(ctx context.Context, req *ssov1.UploadPhotoRequest) (*ssov1.UploadPhotoResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	if req.GetFileName() == "" {
+		return nil, status.Error(codes.InvalidArgument, "file name is required. Example: avatar.jpg")
+	}
+
+	if req.GetPhoto() == nil {
+		return nil, status.Error(codes.InvalidArgument, "photo is required")
+	}
+
+	if req.GetContentType() == "" {
+		return nil, status.Error(codes.InvalidArgument, "content type is required. Example: image/jpeg")
+	}
+
+	url, err := s.userService.UploadPhoto(ctx, req.GetUserId(), req.GetPhoto(), req.GetContentType(), req.GetFileName())
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return &ssov1.UploadPhotoResponse{
+				Url: "",
+				Status: "ERROR",
+				Message: "User not found",
+			}, status.Error(codes.NotFound, err.Error())
+		}
+		return &ssov1.UploadPhotoResponse{
+			Url: "",
+			Status: "ERROR",
+			Message: "Internal error",
+		}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &ssov1.UploadPhotoResponse{
+		Url: url,
+		Status: "SUCCESS",
+		Message: "Photo uploaded successfully",
+	}, nil
 }

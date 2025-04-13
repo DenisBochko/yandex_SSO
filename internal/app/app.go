@@ -7,6 +7,8 @@ import (
 	"yandex-sso/internal/services/auth"
 	"yandex-sso/internal/services/users"
 	postgresql "yandex-sso/internal/storage/postgres"
+	miniostorage "yandex-sso/internal/storage/minio"
+	minio "yandex-sso/pkg/minIO"
 	"yandex-sso/pkg/postgres"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,7 +22,7 @@ type App struct {
 }
 
 func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
-	// Подключение к БД
+	// Создаём новый экземпляр подключения к бд
 	conn, err := postgres.New(ctx, cfg.Postgres)
 
 	if err != nil {
@@ -33,15 +35,24 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 		return nil
 	}
 
+	// Создаём новый экземпляр minIO клиента
+	minioClient, err := minio.New(ctx, log, cfg.Minio)
+
+	// Созадаём новый экземпляр хранилища postgresql
 	postgresStorage := postgresql.New(conn)
+
+	// Создаём новый экземпляр хранилища minIO
+	minIOStorage := miniostorage.New(minioClient, cfg.Minio.Bucket)
+
+
 	// Создаём новый экземпляр сервиса аутентификации
 	authService := auth.New(log, postgresStorage, &cfg.Jwt)
 
 	// Создаём новый экземпляр сервиса пользователей
-	userService := users.New(log, postgresStorage, &cfg.Jwt)
+	userService := users.New(log, postgresStorage, minIOStorage, &cfg.Jwt)
 
 	// Создаём новый gRPC сервер
-	// и регистрируем в нём сервис аутентификации
+	// и регистрируем в нём сервисы аутентификации и пользователей
 	grpcApp := grpcapp.New(log, authService, userService, cfg.GRPC.Port)
 
 	return &App{

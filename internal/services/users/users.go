@@ -20,21 +20,28 @@ type Storage interface {
 	DeleteUser(ctx context.Context, id string) (bool, error)
 }
 
+type MinIoStorage interface {
+	UploadPhoto(ctx context.Context, id string, photo []byte, contentType string, fileName string) (string, error)
+}
+
 type UsersService struct {
-	log     *zap.Logger
-	storage Storage
-	cfg     *config.JwtConfig
+	log          *zap.Logger
+	storage      Storage
+	minIoStorage MinIoStorage
+	cfg          *config.JwtConfig
 }
 
 func New(
 	log *zap.Logger,
 	storage Storage,
+	minioStorage MinIoStorage,
 	cfg *config.JwtConfig,
 ) *UsersService {
 	return &UsersService{
-		log:     log,
-		storage: storage,
-		cfg:     cfg,
+		log:          log,
+		storage:      storage,
+		minIoStorage: minioStorage,
+		cfg:          cfg,
 	}
 }
 
@@ -105,4 +112,43 @@ func (u *UsersService) DeleteUser(ctx context.Context, id string) (bool, error) 
 	}
 
 	return ok, nil
+}
+
+func (u *UsersService) UploadPhoto(ctx context.Context, id string, photo []byte, contentType string, fileName string) (string, error) {
+	log := u.log.With(zap.String("id", id))
+	log.Info("Uploading photo")
+
+	// Проверяем, что пользователь существует
+	user, err := u.storage.UserById(ctx, id)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			log.Info("User not found")
+			return "", storage.ErrUserNotFound
+		}
+		log.Info("failed to get user", zap.Error(err))
+		return "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Загружаем фото в MinIO
+	url, err := u.minIoStorage.UploadPhoto(ctx, id, photo, contentType, fileName)
+	if err != nil {
+		log.Info("failed to upload photo", zap.Error(err))
+		return "", storage.ErrInternalStorage
+	}
+
+	// Обновляем URL фото в базе данных
+	user.Avatar = url
+
+	ok, err := u.storage.UpdateUser(ctx, user)
+	if err != nil {
+		log.Info("failed to update user in database", zap.Error(err))
+		return "", fmt.Errorf("failed to update user: %w", err)
+	}
+
+	if !ok {
+		log.Info("failed to update user in database")
+		return "", storage.ErrInternalStorage
+	}
+
+	return url, nil
 }

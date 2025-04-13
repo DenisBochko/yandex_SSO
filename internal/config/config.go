@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"time"
+	minio "yandex-sso/pkg/minIO"
 	"yandex-sso/pkg/postgres"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -14,6 +15,7 @@ type Config struct {
 	Jwt      JwtConfig            `yaml:"jwt"`
 	GRPC     GRPCConfig           `yaml:"grpc"`
 	Postgres postgres.PostgresCfg `yaml:"postgres"`
+	Minio    minio.MinioConfig    `yaml:"minio"`
 }
 
 type JwtConfig struct {

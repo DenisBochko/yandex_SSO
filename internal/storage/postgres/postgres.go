@@ -2,10 +2,12 @@ package postgresql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"yandex-sso/internal/domain/models"
 	"yandex-sso/internal/storage"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -101,8 +103,10 @@ func (s *Storage) Users(ctx context.Context, ids []string) ([]models.User, error
 func (s *Storage) UserById(ctx context.Context, id string) (models.User, error) {
 	var user models.User
 
-	err := s.db.QueryRow(ctx, "SELECT id, name, email, pass_hash, verify, avatar FROM users WHERE id = $1",
-		id).Scan(
+	err := s.db.QueryRow(ctx, `
+        SELECT id, name, email, pass_hash, verify, avatar
+        FROM users WHERE id = $1
+    `, id).Scan(
 		&user.ID,
 		&user.Name,
 		&user.Email,
@@ -111,13 +115,23 @@ func (s *Storage) UserById(ctx context.Context, id string) (models.User, error) 
 		&user.Avatar,
 	)
 
+	// пользователь не найден
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.User{}, storage.ErrUserNotFound
+	}
+
+	// некорректный UUID (например, невалидная строка)
 	if pgErr, ok := err.(*pgconn.PgError); ok {
 		switch pgErr.Code {
-		case "22P02": // такого id не существует
+		case "22P02": // invalid_text_representation (например, плохой uuid)
 			return models.User{}, storage.ErrUserNotFound
 		default:
 			return models.User{}, fmt.Errorf("failed to get user: %w", err)
 		}
+	}
+
+	if err != nil {
+		return models.User{}, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	return user, nil
@@ -125,9 +139,11 @@ func (s *Storage) UserById(ctx context.Context, id string) (models.User, error) 
 
 // Обновляет данные пользователя по id
 func (s *Storage) UpdateUser(ctx context.Context, user models.User) (bool, error) {
-	_, err := s.db.Exec(ctx, "UPDATE users SET name = $1, email = $2 WHERE id = $3",
+	_, err := s.db.Exec(ctx, "UPDATE users SET name = $1, email = $2, verify = $3, avatar = $4 WHERE id = $5",
 		user.Name,
 		user.Email,
+		user.Verified,
+		user.Avatar,
 		user.ID,
 	)
 

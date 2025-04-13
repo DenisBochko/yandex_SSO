@@ -6,5 +6,5 @@ type User struct {
 	Email    string
 	PassHash []byte
 	Verified bool
-	Avatar   *string
+	Avatar   string
 }
