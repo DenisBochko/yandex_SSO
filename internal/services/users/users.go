@@ -17,6 +17,7 @@ type Storage interface {
 	Users(ctx context.Context, ids []string) ([]models.User, error)
 	UserById(ctx context.Context, id string) (models.User, error)
 	UpdateUser(ctx context.Context, user models.User) (bool, error) // обновление по id
+	DeleteUser(ctx context.Context, id string) (bool, error)
 }
 
 type UsersService struct {
@@ -89,3 +90,19 @@ func (u *UsersService) UpdateUser(ctx context.Context, user models.User) (bool, 
 	return ok, nil
 }
 
+func (u *UsersService) DeleteUser(ctx context.Context, id string) (bool, error) {
+	log := u.log.With(zap.String("id", id))
+	log.Info("Deleting user")
+
+	ok, err := u.storage.DeleteUser(ctx, id)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			log.Info("User not found")
+			return false, storage.ErrUserNotFound
+		}
+		log.Info("failed to delete user", zap.Error(err))
+		return false, fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	return ok, nil
+}

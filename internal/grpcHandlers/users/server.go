@@ -16,6 +16,7 @@ type UsersService interface {
 	GetUsers(ctx context.Context, ids []string) ([]models.User, error)
 	GetUserById(ctx context.Context, id string) (models.User, error)
 	UpdateUser(ctx context.Context, user models.User) (bool, error)
+	DeleteUser(ctx context.Context, id string) (bool, error)
 }
 
 type UsersServerAPI struct {
@@ -110,7 +111,25 @@ func (s *UsersServerAPI) UpdateUser(ctx context.Context, req *ssov1.UpdateUserRe
 }
 
 func (s *UsersServerAPI) DeleteUser(ctx context.Context, req *ssov1.DeleteUserRequest) (*ssov1.DeleteUserResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	ok, err := s.userService.DeleteUser(ctx, req.GetUserId())
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !ok {
+		return nil, status.Error(codes.Internal, "failed to delete user")
+	}
+
+	return &ssov1.DeleteUserResponse{
+		UserId: req.GetUserId(),
+	}, nil
 }
 
 func (s *UsersServerAPI) UploadPhoto(ctx context.Context, req *ssov1.UploadPhotoRequest) (*ssov1.UploadPhotoResponse, error) {

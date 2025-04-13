@@ -142,3 +142,18 @@ func (s *Storage) UpdateUser(ctx context.Context, user models.User) (bool, error
 
 	return true, nil
 }
+
+func (s *Storage) DeleteUser(ctx context.Context, id string) (bool, error) {
+	_, err := s.db.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
+
+	if pgErr, ok := err.(*pgconn.PgError); ok {
+		switch pgErr.Code {
+		case "22P02": // такого id не существует
+			return false, storage.ErrUserNotFound
+		default:
+			return false, fmt.Errorf("failed to delete user: %w", err)
+		}
+	}
+
+	return true, nil
+}
