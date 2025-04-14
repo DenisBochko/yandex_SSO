@@ -10,12 +10,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Auth interface {
-	Login(ctx context.Context, email string, password string) (string, string, error)
+	Login(ctx context.Context, email string, password string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error)
 	Register(ctx context.Context, name string, email string, password string) (string, error)
-	RefreshToken(ctx context.Context, token string) (string, error)
+	RefreshToken(ctx context.Context, token string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error)
 	Verify(ctx context.Context, token string) (bool, error)
 }
 
@@ -59,7 +60,7 @@ func (s *AuthServerAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ss
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	accessToken, refreshToken, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
+	accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
 
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
@@ -70,16 +71,18 @@ func (s *AuthServerAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ss
 
 	return &ssov1.LoginResponse{
 		AccessToken:  accessToken,
+		AccessTokenExpiresAt: accessTokenExpiresAt,
 		RefreshToken: refreshToken,
+		RefreshTokenExpiresAt: refreshTokenExpiresAt,
 	}, nil
 }
 
 func (s *AuthServerAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
-	if req.GetAccessToken() == "" {
+	if req.GetRefreshToken() == "" {
 		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
 	}
 
-	accessToken, err := s.auth.RefreshToken(ctx, req.GetAccessToken())
+	accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt, err := s.auth.RefreshToken(ctx, req.GetRefreshToken())
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.Unauthenticated, err.Error())
@@ -89,7 +92,9 @@ func (s *AuthServerAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshToke
 
 	return &ssov1.RefreshTokenResponse{
 		AccessToken:  accessToken,
-		RefreshToken: req.GetAccessToken(), // возвращаем такой же refresh token
+		AccessTokenExpiresAt: accessTokenExpiresAt,
+		RefreshToken: refreshToken, // возвращаем такой же refresh token
+		RefreshTokenExpiresAt: refreshTokenExpiresAt, 
 	}, nil
 }
 

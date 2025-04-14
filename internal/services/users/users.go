@@ -114,7 +114,7 @@ func (u *UsersService) DeleteUser(ctx context.Context, id string) (bool, error) 
 	return ok, nil
 }
 
-func (u *UsersService) UploadPhoto(ctx context.Context, id string, photo []byte, contentType string, fileName string) (string, error) {
+func (u *UsersService) UploadAvatar(ctx context.Context, id string, photo []byte, contentType string, fileName string) (string, error) {
 	log := u.log.With(zap.String("id", id))
 	log.Info("Uploading photo")
 

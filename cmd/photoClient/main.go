@@ -30,15 +30,14 @@ func main() {
 
 	fmt.Println(data)
 
-	resp, err := client.UploadPhoto(ctx, &ssov1.UploadPhotoRequest{
-		UserId:      "user456",
-		FileName:    "avatar.jpg",
-		ContentType: "image/jpeg",
+	resp, err := client.UploadAvatar(ctx, &ssov1.UploadAvatarRequest{
+		UserId:      "744ca668-8f96-4452-be6d-708cd86c5390",
 		Photo:       data,
+		ContentType: "image/png",
 	})
 	if err != nil {
 		log.Fatalf("upload error: %v", err)
 	}
 
-	log.Printf("Status: %s\nMessage: %s\nURL: %s", resp.Status, resp.Message, resp.Url)
+	log.Printf("URL: %s", resp.Url)
 }

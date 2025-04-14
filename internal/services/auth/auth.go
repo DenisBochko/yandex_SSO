@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"yandex-sso/internal/config"
 	"yandex-sso/internal/domain/models"
 	"yandex-sso/internal/storage"
@@ -11,14 +12,15 @@ import (
 
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Сервисный слой
 
 type Auth struct {
-	log       *zap.Logger
-	storage   Storage
-	cfg *config.JwtConfig
+	log     *zap.Logger
+	storage Storage
+	cfg     *config.JwtConfig
 }
 
 type Storage interface {
@@ -32,9 +34,9 @@ func New(
 	cfg *config.JwtConfig,
 ) *Auth {
 	return &Auth{
-		log:       log,
-		storage:   storage,
-		cfg: cfg,
+		log:     log,
+		storage: storage,
+		cfg:     cfg,
 	}
 }
 
@@ -75,7 +77,7 @@ func (a *Auth) Register(ctx context.Context, name string, email string, pass str
 //
 // If user exists, but password is incorrect, returns error.
 // If user doesn't exist, returns error.
-func (a *Auth) Login(ctx context.Context, email string, password string) (string, string, error) {
+func (a *Auth) Login(ctx context.Context, email string, password string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error) {
 	log := a.log.With(zap.String("email", email))
 	log.Info("Attempting to login user")
 
@@ -84,16 +86,16 @@ func (a *Auth) Login(ctx context.Context, email string, password string) (string
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			log.Warn("user not found", zap.Error(err))
-			return "", "", fmt.Errorf("user not found: %w", ErrInvalidCredentials)
+			return "", nil, "", nil, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
 		}
 		log.Error("failed to get user", zap.Error(err))
-		return "", "", fmt.Errorf("failed to get user: %w", err)
+		return "", nil, "", nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	// Проверяем корректность полученного пароля
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
 		log.Warn("invalid credentials", zap.Error(err))
-		return "", "", fmt.Errorf("invalid credentials: %w", ErrInvalidCredentials)
+		return "", nil, "", nil, fmt.Errorf("invalid credentials: %w", ErrInvalidCredentials)
 	}
 
 	log.Info("user logged in successfully", zap.String("userID", user.ID))
@@ -102,39 +104,51 @@ func (a *Auth) Login(ctx context.Context, email string, password string) (string
 	accessToken, err := jwt.NewToken(user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
 	if err != nil {
 		log.Error("failed to create access token", zap.Error(err))
-		return "", "", fmt.Errorf("failed to create access token: %w", err)
+		return "", nil, "", nil, fmt.Errorf("failed to create access token: %w", err)
 	}
+
+	access_token_expires_at := durationToTimestamp(time.Now(), a.cfg.AccessTokenTTL)
 
 	refreshToken, err := jwt.NewToken(user, a.cfg.AppSecretRefreshToken, a.cfg.RefreshTokenTTL)
 	if err != nil {
 		log.Error("failed to create refresh token", zap.Error(err))
-		return "", "", fmt.Errorf("failed to create refresh token: %w", err)
+		return "", nil, "", nil, fmt.Errorf("failed to create refresh token: %w", err)
 	}
 
-	return accessToken, refreshToken, nil
+	refresh_token_expires_at := durationToTimestamp(time.Now(), a.cfg.RefreshTokenTTL)
+
+	return accessToken,	access_token_expires_at, refreshToken, refresh_token_expires_at, nil
 }
 
-func (a *Auth) RefreshToken(ctx context.Context, token string) (string, error) {
+func (a *Auth) RefreshToken(ctx context.Context, token string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error) {
 	// Проверяем валидность токена
 	claims, err := jwt.ValidateToken(token, a.cfg.AppSecretRefreshToken)
 	if err != nil {
-		return "", fmt.Errorf("invalid token: %w", err)
+		return "", nil, "", nil, fmt.Errorf("invalid token: %w", err)
 	}
 
 	user := models.User{
-		ID: claims["uid"].(string),
+		ID:    claims["uid"].(string),
 		Email: claims["email"].(string),
 	}
 
 	// Создаем новый access токен
 	newAccessToken, err := jwt.NewToken(user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
 	if err != nil {
-		return "", fmt.Errorf("failed to create new token: %w", err)
+		return "", nil, "", nil, fmt.Errorf("failed to create new token: %w", err)
 	}
 
-	return newAccessToken, nil
+	access_token_expires_at := durationToTimestamp(time.Now(), a.cfg.AccessTokenTTL)
+	refresh_token_expires_at := durationToTimestamp(time.Now(), a.cfg.RefreshTokenTTL)
+
+	return newAccessToken, access_token_expires_at, token, refresh_token_expires_at, nil
 }
 
 func (a *Auth) Verify(ctx context.Context, token string) (bool, error) {
 	return true, nil
+}
+
+func durationToTimestamp(startTime time.Time, duration time.Duration) *timestamppb.Timestamp {
+	t := startTime.Add(duration)
+	return timestamppb.New(t)
 }

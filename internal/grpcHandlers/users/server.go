@@ -17,8 +17,12 @@ type UsersService interface {
 	GetUserById(ctx context.Context, id string) (models.User, error)
 	UpdateUser(ctx context.Context, user models.User) (bool, error)
 	DeleteUser(ctx context.Context, id string) (bool, error)
-	UploadPhoto(ctx context.Context, id string, photo []byte, contentType string, fileName string) (string, error)
+	UploadAvatar(ctx context.Context, id string, photo []byte, contentType string, fileName string) (string, error)
 }
+
+const (
+	fileName = "avatar"
+)
 
 type UsersServerAPI struct {
 	ssov1.UnimplementedUsersServer
@@ -47,6 +51,7 @@ func (u *UsersServerAPI) GetUserById(ctx context.Context, req *ssov1.GetUserById
 			UserId: user.ID,
 			Name:   user.Name,
 			Email:  user.Email,
+			AvatarUrl: user.Avatar,
 		},
 	}, nil
 }
@@ -138,13 +143,9 @@ func (s *UsersServerAPI) DeleteUser(ctx context.Context, req *ssov1.DeleteUserRe
 	}, nil
 }
 
-func (s *UsersServerAPI) UploadPhoto(ctx context.Context, req *ssov1.UploadPhotoRequest) (*ssov1.UploadPhotoResponse, error) {
+func (s *UsersServerAPI) UploadAvatar(ctx context.Context, req *ssov1.UploadAvatarRequest) (*ssov1.UploadAvatarResponse, error) {
 	if req.GetUserId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
-	}
-
-	if req.GetFileName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "file name is required. Example: avatar.jpg")
 	}
 
 	if req.GetPhoto() == nil {
@@ -155,25 +156,19 @@ func (s *UsersServerAPI) UploadPhoto(ctx context.Context, req *ssov1.UploadPhoto
 		return nil, status.Error(codes.InvalidArgument, "content type is required. Example: image/jpeg")
 	}
 
-	url, err := s.userService.UploadPhoto(ctx, req.GetUserId(), req.GetPhoto(), req.GetContentType(), req.GetFileName())
+	url, err := s.userService.UploadAvatar(ctx, req.GetUserId(), req.GetPhoto(), req.GetContentType(), fileName)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
-			return &ssov1.UploadPhotoResponse{
+			return &ssov1.UploadAvatarResponse{
 				Url: "",
-				Status: "ERROR",
-				Message: "User not found",
 			}, status.Error(codes.NotFound, err.Error())
 		}
-		return &ssov1.UploadPhotoResponse{
+		return &ssov1.UploadAvatarResponse{
 			Url: "",
-			Status: "ERROR",
-			Message: "Internal error",
 		}, status.Error(codes.Internal, err.Error())
 	}
 
-	return &ssov1.UploadPhotoResponse{
+	return &ssov1.UploadAvatarResponse{
 		Url: url,
-		Status: "SUCCESS",
-		Message: "Photo uploaded successfully",
 	}, nil
 }
