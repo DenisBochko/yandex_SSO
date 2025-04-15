@@ -20,3 +20,19 @@ POSTGRES:
 
   POSTGRES_MAX_CONN: 10
   POSTGRES_MIN_CONN: 5
+
+minio:
+  MINIO_HOST: localhost
+  MINIO_PORT: 9000
+  MINIO_USER: minio
+  MINIO_PASS: minio123
+  MINIO_BUCKET: user-avatars
+  MINIO_SSLMODE: true
+
+kakfa:
+  KAFKA_BROKERS:
+    - 127.0.0.1:9095
+    - 127.0.0.1:9096
+    - 127.0.0.1:9097
+  KAFKA_TOPIC: test_topic
+  

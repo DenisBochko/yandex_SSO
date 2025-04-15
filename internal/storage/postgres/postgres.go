@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"yandex-sso/internal/domain/models"
 	"yandex-sso/internal/storage"
 
@@ -168,6 +169,20 @@ func (s *Storage) DeleteUser(ctx context.Context, id string) (bool, error) {
 			return false, storage.ErrUserNotFound
 		default:
 			return false, fmt.Errorf("failed to delete user: %w", err)
+		}
+	}
+
+	return true, nil
+}
+
+func (s *Storage) CreateVerificationToken(ctx context.Context, userID string, token string, expiresAt time.Time) (bool, error) {
+	_, err := s.db.Exec(ctx, "INSERT INTO verification_tokens(user_id, token, expires_at) VALUES($1, $2, $3)", userID, token, expiresAt)
+	if pgErr, ok := err.(*pgconn.PgError); ok {
+		switch pgErr.Code {
+		case "23505": // Нарушение уникальности
+			return false, storage.ErrTokenExists
+		default:
+			return false, fmt.Errorf("failed to create verification token: %w", err)
 		}
 	}
 

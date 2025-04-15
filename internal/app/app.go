@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"yandex-sso/internal/adapter"
 	grpcapp "yandex-sso/internal/app/grpc"
 	"yandex-sso/internal/config"
 	"yandex-sso/internal/services/auth"
 	"yandex-sso/internal/services/users"
-	postgresql "yandex-sso/internal/storage/postgres"
 	miniostorage "yandex-sso/internal/storage/minio"
+	postgresql "yandex-sso/internal/storage/postgres"
+	"yandex-sso/pkg/kafka"
 	minio "yandex-sso/pkg/minIO"
 	"yandex-sso/pkg/postgres"
 
@@ -38,15 +40,31 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 	// Создаём новый экземпляр minIO клиента
 	minioClient, err := minio.New(ctx, log, cfg.Minio)
 
+	if err != nil {
+		log.Info("failed to connect to minIO", zap.Error(err))
+		return nil
+	}
+
+	// Создаём новый экземпляр kafka клиента
+	kafkaProducer, err := kafka.NewSyncProducer(ctx, cfg.Kafka)
+
+	if err != nil {
+		log.Info("failed to connect to kafka", zap.Error(err))
+		return nil
+	}
+
 	// Созадаём новый экземпляр хранилища postgresql
 	postgresStorage := postgresql.New(conn)
 
 	// Создаём новый экземпляр хранилища minIO
 	minIOStorage := miniostorage.New(minioClient, cfg.Minio.Bucket)
 
+	// Создаём новый экземпляр адаптера kafka
+	kafkaAdapter := adapter.New(log, kafkaProducer, cfg.Kafka.Topic)
 
+	
 	// Создаём новый экземпляр сервиса аутентификации
-	authService := auth.New(log, postgresStorage, &cfg.Jwt)
+	authService := auth.New(log, postgresStorage, kafkaAdapter, &cfg.Jwt)
 
 	// Создаём новый экземпляр сервиса пользователей
 	userService := users.New(log, postgresStorage, minIOStorage, &cfg.Jwt)

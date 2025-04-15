@@ -12,14 +12,14 @@ import (
 )
 
 type PostgresCfg struct {
-	Host     string `yaml:"POSTGRES_HOST" env:"POSTGRES_HOST" env-default:"localhost"`
-	Port     string `yaml:"POSTGRES_PORT" env:"POSTGRES_PORT" env-default:"5432"`
-	Username string `yaml:"POSTGRES_USER" env:"POSTGRES_USER" env-default:"admin"`
-	Password string `yaml:"POSTGRES_PASS" env:"POSTGRES_PASS" env-default:"admin"`
-	Database string `yaml:"POSTGRES_DB" env:"POSTGRES_DB" env-default:"test_db"`
-	Sslmode  string `yaml:"POSTGRES_SSLMODE" env:"POSTGRES_SSLMODE" env-default:"disable"`
-	MaxConn  int32  `yaml:"POSTGRES_MAX_CONN" env:"POSTGRES_MAX_CONN" env-default:"10"`
-	MinConn  int32  `yaml:"POSTGRES_MIN_CONN" env:"POSTGRES_MIN_CONN" env-default:"5"`
+	Host     string `yaml:"POSTGRES_HOST" env:"POSTGRES_HOST" env-required:"true"`
+	Port     string `yaml:"POSTGRES_PORT" env:"POSTGRES_PORT" env-required:"true"`
+	Username string `yaml:"POSTGRES_USER" env:"POSTGRES_USER" env-required:"true"`
+	Password string `yaml:"POSTGRES_PASS" env:"POSTGRES_PASS" env-required:"true"`
+	Database string `yaml:"POSTGRES_DB" env:"POSTGRES_DB" env-required:"true"`
+	Sslmode  string `yaml:"POSTGRES_SSLMODE" env:"POSTGRES_SSLMODE" env-required:"true"`
+	MaxConn  int32  `yaml:"POSTGRES_MAX_CONN" env:"POSTGRES_MAX_CONN" env-required:"true"`
+	MinConn  int32  `yaml:"POSTGRES_MIN_CONN" env:"POSTGRES_MIN_CONN" env-required:"true"`
 }
 
 func New(ctx context.Context, config PostgresCfg) (*pgxpool.Pool, error) {
@@ -34,6 +34,8 @@ func New(ctx context.Context, config PostgresCfg) (*pgxpool.Pool, error) {
 		config.MaxConn,
 		config.MinConn,
 	)
+
+	fmt.Println("Connecting to database with connection string:", connString)
 
 	conn, err := pgxpool.New(ctx, connString)
 

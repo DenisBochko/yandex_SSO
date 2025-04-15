@@ -10,6 +10,7 @@ import (
 	"yandex-sso/internal/storage"
 	"yandex-sso/lib/jwt"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -18,32 +19,42 @@ import (
 // Сервисный слой
 
 type Auth struct {
-	log     *zap.Logger
-	storage Storage
-	cfg     *config.JwtConfig
+	log            *zap.Logger
+	storage        Storage
+	KafkaTransport KafkaTransport
+	cfg            *config.JwtConfig
+}
+
+type KafkaTransport interface {
+	SendVerificationUserMessage(ctx context.Context, message models.VerificationUserMessage) error
 }
 
 type Storage interface {
 	SaveUser(ctx context.Context, name string, email string, passHash []byte) (uid string, err error)
 	User(ctx context.Context, email string) (models.User, error)
+	CreateVerificationToken(ctx context.Context, userID string, token string, expiresAt time.Time) (bool, error)
 }
 
 func New(
 	log *zap.Logger,
 	storage Storage,
+	transport KafkaTransport,
 	cfg *config.JwtConfig,
 ) *Auth {
 	return &Auth{
-		log:     log,
-		storage: storage,
-		cfg:     cfg,
+		log:            log,
+		storage:        storage,
+		KafkaTransport: transport,
+		cfg:            cfg,
 	}
 }
 
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserExists         = errors.New("user already exists")
+	ErrRegistrationFailed = errors.New("registration failed")
 )
+// apiGateway.com/api/sso/verify?token=edea549f-8843-492e-ad8e-c11a62e3bdc5
 
 // RegisterNewUser registers new user in the system and returns user ID.
 // If user with given username already exists, returns error.
@@ -68,6 +79,34 @@ func (a *Auth) Register(ctx context.Context, name string, email string, pass str
 
 		log.Info("failed to save user", zap.Error(err))
 		return "", fmt.Errorf("failed to save user: %w", err)
+	}
+
+	// Создаем верификационный токен для пользователя
+	verificationToken := uuid.NewString()
+	expiresAt := time.Now().Add(15 * time.Minute)
+
+	ok, err := a.storage.CreateVerificationToken(ctx, id, verificationToken, expiresAt)
+	if err != nil {
+		log.Error("failed to create verification token", zap.Error(err))
+		return "", fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	if !ok {
+		log.Error("failed to create verification token", zap.String("userID", id))
+		return "", fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	// Отправляем сообщение в Kafka
+	message := models.VerificationUserMessage{
+		UserID: id,
+		Name:   name,
+		Email:  email,
+		Token:  verificationToken,
+	}
+
+	if err := a.KafkaTransport.SendVerificationUserMessage(ctx, message); err != nil {
+		log.Error("failed to send verification message", zap.Error(err))
+		return "", fmt.Errorf("failed to send verification message: %w", err)
 	}
 
 	return id, nil
@@ -117,7 +156,7 @@ func (a *Auth) Login(ctx context.Context, email string, password string) (string
 
 	refresh_token_expires_at := durationToTimestamp(time.Now(), a.cfg.RefreshTokenTTL)
 
-	return accessToken,	access_token_expires_at, refreshToken, refresh_token_expires_at, nil
+	return accessToken, access_token_expires_at, refreshToken, refresh_token_expires_at, nil
 }
 
 func (a *Auth) RefreshToken(ctx context.Context, token string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error) {

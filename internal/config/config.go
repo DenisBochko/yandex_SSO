@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"time"
+	"yandex-sso/pkg/kafka"
 	minio "yandex-sso/pkg/minIO"
 	"yandex-sso/pkg/postgres"
 
@@ -14,8 +15,9 @@ type Config struct {
 	Env      string               `yaml:"env" env-default:"local"`
 	Jwt      JwtConfig            `yaml:"jwt"`
 	GRPC     GRPCConfig           `yaml:"grpc"`
-	Postgres postgres.PostgresCfg `yaml:"postgres"`
+	Postgres postgres.PostgresCfg `yaml:"POSTGRES"`
 	Minio    minio.MinioConfig    `yaml:"minio"`
+	Kafka    kafka.KafkaConfig    `yaml:"kafka"`
 }
 
 type JwtConfig struct {
