@@ -46,7 +46,7 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 	}
 
 	// Создаём новый экземпляр kafka клиента
-	kafkaProducer, err := kafka.NewSyncProducer(ctx, cfg.Kafka)
+	kafkaProducer, err := kafka.NewSyncProducer(ctx, log, cfg.Kafka)
 
 	if err != nil {
 		log.Info("failed to connect to kafka", zap.Error(err))

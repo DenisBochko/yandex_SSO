@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/IBM/sarama"
+	"go.uber.org/zap"
 )
 
 type KafkaConfig struct {
@@ -11,7 +12,7 @@ type KafkaConfig struct {
 	Topic   string   `yaml:"KAFKA_TOPIC" env-required:"true"`
 }
 
-func NewSyncProducer(ctx context.Context, cfg KafkaConfig) (sarama.SyncProducer, error) {
+func NewSyncProducer(ctx context.Context, log *zap.Logger, cfg KafkaConfig) (sarama.SyncProducer, error) {
 	brokers := cfg.Brokers
 
 	if len(brokers) == 0 {
@@ -25,6 +26,13 @@ func NewSyncProducer(ctx context.Context, cfg KafkaConfig) (sarama.SyncProducer,
 	config.Producer.RequiredAcks = sarama.WaitForAll // ждём подтверждения от всех брокеров
 	producer, err := sarama.NewSyncProducer(brokers, config)
 
+	if err != nil {
+		log.Error("failed to create kafka producer", zap.Error(err))
+		return nil, err
+	}
+	
+
+	log.Info("Kafka producer created", zap.Strings("brokers", brokers), zap.String("topic", cfg.Topic))
 	return producer, err
 }
 

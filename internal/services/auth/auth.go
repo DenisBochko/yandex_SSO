@@ -33,6 +33,7 @@ type Storage interface {
 	SaveUser(ctx context.Context, name string, email string, passHash []byte) (uid string, err error)
 	User(ctx context.Context, email string) (models.User, error)
 	CreateVerificationToken(ctx context.Context, userID string, token string, expiresAt time.Time) (bool, error)
+	VerifyToken(ctx context.Context, token string) (bool, error)
 }
 
 func New(
@@ -54,6 +55,7 @@ var (
 	ErrUserExists         = errors.New("user already exists")
 	ErrRegistrationFailed = errors.New("registration failed")
 )
+
 // apiGateway.com/api/sso/verify?token=edea549f-8843-492e-ad8e-c11a62e3bdc5
 
 // RegisterNewUser registers new user in the system and returns user ID.
@@ -83,7 +85,7 @@ func (a *Auth) Register(ctx context.Context, name string, email string, pass str
 
 	// Создаем верификационный токен для пользователя
 	verificationToken := uuid.NewString()
-	expiresAt := time.Now().Add(15 * time.Minute)
+	expiresAt := time.Now().Add(10 * time.Minute).UTC()
 
 	ok, err := a.storage.CreateVerificationToken(ctx, id, verificationToken, expiresAt)
 	if err != nil {
@@ -184,6 +186,24 @@ func (a *Auth) RefreshToken(ctx context.Context, token string) (string, *timesta
 }
 
 func (a *Auth) Verify(ctx context.Context, token string) (bool, error) {
+	log := a.log.With(zap.String("token", token))
+	log.Info("Verifying token")
+
+	ok, err := a.storage.VerifyToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, storage.ErrTokenNotFound) {
+			return false, fmt.Errorf("token not found: %w", err)
+		}
+
+		if errors.Is(err, storage.ErrTokenExpired) {
+			return false, fmt.Errorf("token expired: %w", err)
+		}
+	}
+
+	if !ok {
+		return false, fmt.Errorf("token not found: %w", err)
+	}
+
 	return true, nil
 }
 

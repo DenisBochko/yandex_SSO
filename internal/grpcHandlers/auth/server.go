@@ -70,9 +70,9 @@ func (s *AuthServerAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ss
 	}
 
 	return &ssov1.LoginResponse{
-		AccessToken:  accessToken,
-		AccessTokenExpiresAt: accessTokenExpiresAt,
-		RefreshToken: refreshToken,
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessTokenExpiresAt,
+		RefreshToken:          refreshToken,
 		RefreshTokenExpiresAt: refreshTokenExpiresAt,
 	}, nil
 }
@@ -91,13 +91,30 @@ func (s *AuthServerAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshToke
 	}
 
 	return &ssov1.RefreshTokenResponse{
-		AccessToken:  accessToken,
-		AccessTokenExpiresAt: accessTokenExpiresAt,
-		RefreshToken: refreshToken, // возвращаем такой же refresh token
-		RefreshTokenExpiresAt: refreshTokenExpiresAt, 
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessTokenExpiresAt,
+		RefreshToken:          refreshToken, // возвращаем такой же refresh token
+		RefreshTokenExpiresAt: refreshTokenExpiresAt,
 	}, nil
 }
 
 func (s *AuthServerAPI) Verify(ctx context.Context, req *ssov1.VerifyRequest) (*ssov1.VerifyResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	if req.GetVerifyToken() == "" {
+		return nil, status.Error(codes.InvalidArgument, "token is required")
+	}
+
+	isValid, err := s.auth.Verify(ctx, req.GetVerifyToken())
+	if err != nil {
+		if errors.Is(err, storage.ErrTokenNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		if errors.Is(err, storage.ErrTokenExpired) {
+			return nil, status.Error(codes.Aborted, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &ssov1.VerifyResponse{
+		IsValid: isValid,
+	}, nil
 }

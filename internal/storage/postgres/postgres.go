@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -184,6 +185,39 @@ func (s *Storage) CreateVerificationToken(ctx context.Context, userID string, to
 		default:
 			return false, fmt.Errorf("failed to create verification token: %w", err)
 		}
+	}
+
+	return true, nil
+}
+
+func (s *Storage) VerifyToken(ctx context.Context, token string) (bool, error) {
+	var userID string
+	var expiresAt time.Time
+
+	err := s.db.QueryRow(ctx, "SELECT user_id, expires_at FROM verification_tokens WHERE token = $1", token).Scan(&userID, &expiresAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, storage.ErrTokenNotFound
+		}
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			return false, fmt.Errorf("postgres error on token lookup: %s (%s)", pgErr.Message, pgErr.Code)
+		}
+		return false, fmt.Errorf("failed to get verification token: %w", err)
+	}
+
+	if time.Now().UTC().After(expiresAt) {
+		return false, storage.ErrTokenExpired
+	}
+
+	_, err = s.db.Exec(ctx, "UPDATE users SET verify = true WHERE id = $1", userID)
+	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			if pgErr.Code == "22P02" {
+				return false, storage.ErrUserNotFound
+			}
+			return false, fmt.Errorf("postgres error on user update: %s (%s)", pgErr.Message, pgErr.Code)
+		}
+		return false, fmt.Errorf("failed to update user: %w", err)
 	}
 
 	return true, nil

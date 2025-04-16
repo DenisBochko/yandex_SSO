@@ -35,8 +35,6 @@ func New(ctx context.Context, config PostgresCfg) (*pgxpool.Pool, error) {
 		config.MinConn,
 	)
 
-	fmt.Println("Connecting to database with connection string:", connString)
-
 	conn, err := pgxpool.New(ctx, connString)
 
 	if err != nil {
