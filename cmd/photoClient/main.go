@@ -20,7 +20,7 @@ func main() {
 
 	client := ssov1.NewUsersClient(conn)
 
-	data, err := os.ReadFile("cmd/photoClient/image.png")
+	data, err := os.ReadFile("cmd/photoClient/saharoza.jpeg")
 	if err != nil {
 		log.Fatalf("could not read file: %v", err)
 	}
@@ -31,9 +31,9 @@ func main() {
 	fmt.Println(data)
 
 	resp, err := client.UploadAvatar(ctx, &ssov1.UploadAvatarRequest{
-		UserId:      "744ca668-8f96-4452-be6d-708cd86c5390",
+		UserId:      "4b1a44bb-6f12-4f2a-a7ef-5fdea2d5b22f",
 		Photo:       data,
-		ContentType: "image/png",
+		ContentType: "image/jpeg",
 	})
 	if err != nil {
 		log.Fatalf("upload error: %v", err)
