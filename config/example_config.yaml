@@ -13,9 +13,9 @@ grpc:
 POSTGRES:
   POSTGRES_HOST: localhost
   POSTGRES_PORT: 5432
-  POSTGRES_USER: admin
-  POSTGRES_PASS: admin
-  POSTGRES_DB: test_db
+  POSTGRES_USER: "admin"
+  POSTGRES_PASS: "admin"
+  POSTGRES_DB: "test_db"
   POSTGRES_SSLMODE: disable
 
   POSTGRES_MAX_CONN: 10
@@ -29,10 +29,9 @@ minio:
   MINIO_BUCKET: user-avatars
   MINIO_SSLMODE: true
 
-kakfa:
+kafka:
   KAFKA_BROKERS:
-    - 127.0.0.1:9095
-    - 127.0.0.1:9096
-    - 127.0.0.1:9097
-  KAFKA_TOPIC: test_topic
-  
+    - "localhost:9092"  # Внутренние адреса брокеров
+    - "localhost:9093"
+    - "localhost:9094"
+  KAFKA_TOPIC: "register"
