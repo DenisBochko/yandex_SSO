@@ -71,7 +71,7 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 
 	// Создаём новый gRPC сервер
 	// и регистрируем в нём сервисы аутентификации и пользователей
-	grpcApp := grpcapp.New(log, authService, userService, cfg.GRPC.Port)
+	grpcApp := grpcapp.New(log, cfg, authService, userService, cfg.GRPC.Port)
 
 	return &App{
 		GRPCServer: grpcApp,

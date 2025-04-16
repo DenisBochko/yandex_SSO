@@ -12,10 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type authInterceptor struct {
-	appSecret string
-}
-
 type contextKey string
 
 const (
@@ -26,14 +22,38 @@ const (
 	ContextAvatarKey   contextKey = "avatar"
 )
 
-func NewAuthInterceptor(appSecret string) (*authInterceptor, error) {
-	if appSecret == "" {
-		return nil, errors.New("appSecret cannot be empty")
-	}
-	return &authInterceptor{appSecret: appSecret}, nil
+// var unauthenticatedMethods = map[string]bool{
+// 	"/auth.Auth/Register": true,
+// 	"/auth.Auth/Login":    true,
+// }
+
+type AuthInterceptor struct {
+	appSecret             string
+	unauthenticatedRoutes map[string]bool
 }
 
-func (i *authInterceptor) UnaryAuthMiddleware(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+func NewAuthInterceptor(secret string, publicRoutes []string) (*AuthInterceptor, error) {
+	if secret == "" {
+		return nil, errors.New("secret cannot be empty")
+	}
+
+	routes := make(map[string]bool)
+	for _, r := range publicRoutes {
+		routes[r] = true
+	}
+
+	return &AuthInterceptor{
+		appSecret:             secret,
+		unauthenticatedRoutes: routes,
+	}, nil
+}
+
+func (i *AuthInterceptor) UnaryAuthMiddleware(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	// Если маршрут в списке исключений — пропускаем
+	if i.unauthenticatedRoutes[info.FullMethod] {
+		return handler(ctx, req)
+	}
+
 	// получение метаданных из контекста
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -93,7 +113,7 @@ func (i *authInterceptor) UnaryAuthMiddleware(ctx context.Context, req any, info
 }
 
 // ValidateToken проверяет валидность JWT токена и возвращает claims
-func (i *authInterceptor) validateToken(tokenString string, appSecret string) (jwt.MapClaims, error) {
+func (i *AuthInterceptor) validateToken(tokenString string, appSecret string) (jwt.MapClaims, error) {
 	// Парсим токен
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Проверяем метод подписи

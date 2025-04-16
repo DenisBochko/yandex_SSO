@@ -3,6 +3,7 @@ package grpcapp
 import (
 	"fmt"
 	"net"
+	"yandex-sso/internal/config"
 	grpcHandlersAuth "yandex-sso/internal/grpcHandlers/auth"
 	grpcHandlersUsers "yandex-sso/internal/grpcHandlers/users"
 
@@ -17,8 +18,18 @@ type App struct {
 }
 
 // Создаём новый gRPC сервер
-func New(log *zap.Logger, authService grpcHandlersAuth.Auth, userService grpcHandlersUsers.UsersService, port int) *App {
+func New(log *zap.Logger, cfg *config.Config, authService grpcHandlersAuth.Auth, userService grpcHandlersUsers.UsersService, port int) *App {
+	// interceptor, err := authinterceptor.NewAuthInterceptor(cfg.Jwt.AppSecretAccessToken, []string{"/auth.Auth/Register", "/auth.Auth/Login"})
+	// if err != nil {
+	// 	log.Fatal("failed to create auth interceptor", zap.Error(err))
+	// }
+
+	// gRPCServer := grpc.NewServer(
+	// 	grpc.UnaryInterceptor(interceptor.UnaryAuthMiddleware),
+	// )
+
 	gRPCServer := grpc.NewServer()
+
 	grpcHandlersAuth.Register(gRPCServer, authService)
 	grpcHandlersUsers.Register(gRPCServer, userService)
 
