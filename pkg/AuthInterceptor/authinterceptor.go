@@ -19,11 +19,11 @@ type authInterceptor struct {
 type contextKey string
 
 const (
-	userIDKey   contextKey = "user_id"
-	emailKey    contextKey = "email"
-	nameKey     contextKey = "name"
-	verifiedKey contextKey = "verified"
-	avatarKey   contextKey = "avatar"
+	ContextUserIDKey   contextKey = "user_id"
+	ContextEmailKey    contextKey = "email"
+	ContextNameKey     contextKey = "name"
+	ContextVerifiedKey contextKey = "verified"
+	ContextAvatarKey   contextKey = "avatar"
 )
 
 func NewAuthInterceptor(appSecret string) (*authInterceptor, error) {
@@ -82,11 +82,11 @@ func (i *authInterceptor) UnaryAuthMiddleware(ctx context.Context, req any, info
 	// exp := claims["exp"].(float64) // JWT числовые значения возвращаются как float64
 
 	// добавляем данные пользователя в контекст, так мы можем использовать их в последующих grpc методах
-	ctx = context.WithValue(ctx, userIDKey, userID)
-	ctx = context.WithValue(ctx, emailKey, email)
-	ctx = context.WithValue(ctx, nameKey, name)
-	ctx = context.WithValue(ctx, verifiedKey, verified)
-	ctx = context.WithValue(ctx, avatarKey, avatar)
+	ctx = context.WithValue(ctx, ContextUserIDKey, userID)
+	ctx = context.WithValue(ctx, ContextEmailKey, email)
+	ctx = context.WithValue(ctx, ContextNameKey, name)
+	ctx = context.WithValue(ctx, ContextVerifiedKey, verified)
+	ctx = context.WithValue(ctx, ContextAvatarKey, avatar)
 
 	// вызываем следующий обработчик в цепочке
 	return handler(ctx, req)
