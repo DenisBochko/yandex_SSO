@@ -14,7 +14,7 @@ services:
       - kafka2
       - kafka3
     networks:
-      - kafka-network
+      - sso-network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -24,7 +24,7 @@ services:
     ports:
       - "2181:2181"
     networks:
-      - kafka-network
+      - sso-network
 
   kafka1:
     container_name: kafka1
@@ -41,7 +41,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
     networks:
-      - kafka-network
+      - sso-network
 
   kafka2:
     image: confluentinc/cp-kafka:7.6.0
@@ -58,7 +58,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
     networks:
-      - kafka-network
+      - sso-network
 
   kafka3:
     image: confluentinc/cp-kafka:7.6.0
@@ -75,7 +75,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
     networks:
-      - kafka-network
+      - sso-network
   
   minio:
     image: minio/minio
@@ -90,7 +90,7 @@ services:
       MINIO_ROOT_PASSWORD: minio123
     command: server --console-address ":9001" /data
     networks:
-      - kafka-network
+      - sso-network
   
   db:
     image: postgres:15
@@ -110,40 +110,39 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - kafka-network
+      - sso-network
 
-  # sso_service:
-  #   build:
-  #     context: .  # Указываем путь к Dockerfile
-  #     dockerfile: Dockerfile  # Явно указываем файл (опционально)
-  #   container_name: sso_service
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #     minio:
-  #       condition: service_started
-  #     kafka1:
-  #       condition: service_started
-  #     kafka2:
-  #       condition: service_started
-  #     kafka3:
-  #       condition: service_started
+  sso_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sso_service
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      kafka1:
+        condition: service_started
+      kafka2:
+        condition: service_started
+      kafka3:
+        condition: service_started
       
-      
-  #   ports:
-  #     - "50051:50051"
-  #   volumes:
-  #     - ./config:/app/config  # Монтируем всю папку config (лучше, чем отдельный файл)
-  #   environment:
-  #     CONFIG_PATH: /app/config/docker_config.yaml  # Абсолютный путь внутри контейнера
-  #   networks:
-  #     - kafka-network
-  #   # restart: unless-stopped  # Автоматический перезапуск при падении
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./config:/app/config
+    environment:
+      CONFIG_PATH: /app/config/docker_config.yaml
+    networks:
+      - sso-network
+    restart: unless-stopped
 
 volumes:
   postgres:
-  minio_data:  # Добавляем volume для MinIO (рекомендуется)
+  minio_data:
 
 networks:
-  kafka-network:
-    driver: bridge  # Используем bridge-сеть для контейнеров
+  sso-network:
+    driver: bridge

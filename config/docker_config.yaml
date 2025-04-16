@@ -1,4 +1,4 @@
-env: "local"  # или "prod" для продакшена
+env: "prod"  # или "prod" для продакшена
 
 jwt:
   app_secret_a: "1YAJoxPSVW-W26tGD4x3WRCBW3-px2PQfUbZqzR8YC8"
@@ -26,11 +26,11 @@ minio:
   MINIO_USER: "minio"
   MINIO_PASS: "minio123"
   MINIO_BUCKET: "user-avatars"
-  MINIO_SSLMODE: true  # В Docker-сети SSL обычно не нужен
+  MINIO_SSLMODE: true
 
 kafka:
   KAFKA_BROKERS:
-    - "kafka1:19092"  # Внутренние адреса брокеров
+    - "kafka1:19092"
     - "kafka2:19093"
     - "kafka3:19094"
   KAFKA_TOPIC: "register"
