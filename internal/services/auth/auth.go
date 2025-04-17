@@ -21,12 +21,18 @@ import (
 type Auth struct {
 	log            *zap.Logger
 	storage        Storage
-	KafkaTransport KafkaTransport
+	kafkaTransport KafkaTransport
+	redis          RedisStorage
 	cfg            *config.JwtConfig
 }
 
 type KafkaTransport interface {
 	SendVerificationUserMessage(ctx context.Context, message models.VerificationUserMessage) error
+}
+
+type RedisStorage interface {
+	Set(uuid string, user models.User) error
+	Get(uuid string) (*models.User, error)
 }
 
 type Storage interface {
@@ -40,12 +46,14 @@ func New(
 	log *zap.Logger,
 	storage Storage,
 	transport KafkaTransport,
+	redis RedisStorage,
 	cfg *config.JwtConfig,
 ) *Auth {
 	return &Auth{
 		log:            log,
 		storage:        storage,
-		KafkaTransport: transport,
+		kafkaTransport: transport,
+		redis:          redis,
 		cfg:            cfg,
 	}
 }
@@ -106,7 +114,7 @@ func (a *Auth) Register(ctx context.Context, name string, email string, pass str
 		Token:  verificationToken,
 	}
 
-	if err := a.KafkaTransport.SendVerificationUserMessage(ctx, message); err != nil {
+	if err := a.kafkaTransport.SendVerificationUserMessage(ctx, message); err != nil {
 		log.Error("failed to send verification message", zap.Error(err))
 		return "", fmt.Errorf("failed to send verification message: %w", err)
 	}

@@ -9,9 +9,11 @@ import (
 	"yandex-sso/internal/services/users"
 	miniostorage "yandex-sso/internal/storage/minio"
 	postgresql "yandex-sso/internal/storage/postgres"
+	redisstorage "yandex-sso/internal/storage/redis"
 	"yandex-sso/pkg/kafka"
 	minio "yandex-sso/pkg/minIO"
 	"yandex-sso/pkg/postgres"
+	redisClient "yandex-sso/pkg/redis"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -47,11 +49,13 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 
 	// Создаём новый экземпляр kafka клиента
 	kafkaProducer, err := kafka.NewSyncProducer(ctx, log, cfg.Kafka)
-
 	if err != nil {
 		log.Info("failed to connect to kafka", zap.Error(err))
 		return nil
 	}
+
+	// Создаём новый экземпляр redis клиента
+	redisClient := redisClient.New(ctx, log, cfg.Redis)
 
 	// Созадаём новый экземпляр хранилища postgresql
 	postgresStorage := postgresql.New(conn)
@@ -62,9 +66,11 @@ func New(ctx context.Context, log *zap.Logger, cfg *config.Config) *App {
 	// Создаём новый экземпляр адаптера kafka
 	kafkaAdapter := adapter.New(log, kafkaProducer, cfg.Kafka.Topic)
 
-	
+	// Создаём новый экземпляр хранилища redis
+	redisStorage := redisstorage.New(redisClient, cfg.Jwt.RefreshTokenTTL)
+
 	// Создаём новый экземпляр сервиса аутентификации
-	authService := auth.New(log, postgresStorage, kafkaAdapter, &cfg.Jwt)
+	authService := auth.New(log, postgresStorage, kafkaAdapter, redisStorage, &cfg.Jwt)
 
 	// Создаём новый экземпляр сервиса пользователей
 	userService := users.New(log, postgresStorage, minIOStorage, &cfg.Jwt)

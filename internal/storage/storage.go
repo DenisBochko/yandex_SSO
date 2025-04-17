@@ -10,5 +10,6 @@ var (
     ErrTokenExists = errors.New("token already exists")
     ErrTokenNotFound = errors.New("token not found")
     ErrTokenExpired = errors.New("token expired")
+    ErrKeyDoesNotExist = errors.New("key does not exist")
 )
 
