@@ -73,7 +73,7 @@ func (i *AuthInterceptor) UnaryAuthMiddleware(ctx context.Context, req any, info
 	}
 
 	// проверка токена
-	claims, err := i.validateToken(rawToken, i.appSecret)
+	claims, err := i.ValidateToken(rawToken, i.appSecret)
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, fmt.Sprintf("invalid token: %v", err))
 	}
@@ -113,7 +113,7 @@ func (i *AuthInterceptor) UnaryAuthMiddleware(ctx context.Context, req any, info
 }
 
 // ValidateToken проверяет валидность JWT токена и возвращает claims
-func (i *AuthInterceptor) validateToken(tokenString string, appSecret string) (jwt.MapClaims, error) {
+func (i *AuthInterceptor) ValidateToken(tokenString string, appSecret string) (jwt.MapClaims, error) {
 	// Парсим токен
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Проверяем метод подписи
