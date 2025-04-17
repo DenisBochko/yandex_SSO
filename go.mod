@@ -1,4 +1,4 @@
-module yandex-sso
+module github.com/DenisBochko/yandex_SSO
 
 go 1.23.1
 

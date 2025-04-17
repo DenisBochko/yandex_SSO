@@ -38,5 +38,5 @@ KAFKA:
 REDIS:
   REDIS_HOST: redis
   REDIS_PORT: 6379
-  REDIS_PASS: admin
-  REDIS_DB: 0
+  REDIS_PASS: "admin"
+  REDIS_DB: 1

@@ -3,8 +3,9 @@ package auth
 import (
 	"context"
 	"errors"
-	"yandex-sso/internal/services/auth"
-	"yandex-sso/internal/storage"
+
+	"github.com/DenisBochko/yandex_SSO/internal/services/auth"
+	"github.com/DenisBochko/yandex_SSO/internal/storage"
 
 	ssov1 "github.com/DenisBochko/yandex_contracts/gen/go/sso"
 	"google.golang.org/grpc"
@@ -64,6 +65,9 @@ func (s *AuthServerAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ss
 
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.Unauthenticated, err.Error())
+		}
+		if errors.Is(err, storage.ErrKeyDoesNotExist) {
 			return nil, status.Error(codes.Unauthenticated, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())

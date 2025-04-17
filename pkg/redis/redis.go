@@ -27,5 +27,6 @@ func New(ctx context.Context, log *zap.Logger, config RedisClientCfg) *redis.Cli
 		return nil
 	}
 
+	log.Info("connected to redis", zap.String("host", config.Host), zap.String("port", config.Port))
 	return rdb
 }

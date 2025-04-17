@@ -4,10 +4,10 @@ import (
 	"flag"
 	"os"
 	"time"
-	"yandex-sso/pkg/kafka"
-	minio "yandex-sso/pkg/minIO"
-	"yandex-sso/pkg/postgres"
-	redisClient "yandex-sso/pkg/redis"
+	"github.com/DenisBochko/yandex_SSO/pkg/kafka"
+	minio "github.com/DenisBochko/yandex_SSO/pkg/minIO"
+	"github.com/DenisBochko/yandex_SSO/pkg/postgres"
+	redisClient "github.com/DenisBochko/yandex_SSO/pkg/redis"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -19,7 +19,7 @@ type Config struct {
 	Postgres postgres.PostgresCfg       `yaml:"POSTGRES"`
 	Minio    minio.MinioConfig          `yaml:"MINIO"`
 	Kafka    kafka.KafkaConfig          `yaml:"KAFKA"`
-	Redis    redisClient.RedisClientCfg `yaml:"redis"`
+	Redis    redisClient.RedisClientCfg `yaml:"REDIS"`
 }
 
 type JwtConfig struct {

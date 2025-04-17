@@ -3,9 +3,9 @@ package grpcapp
 import (
 	"fmt"
 	"net"
-	"yandex-sso/internal/config"
-	grpcHandlersAuth "yandex-sso/internal/grpcHandlers/auth"
-	grpcHandlersUsers "yandex-sso/internal/grpcHandlers/users"
+	"github.com/DenisBochko/yandex_SSO/internal/config"
+	grpcHandlersAuth "github.com/DenisBochko/yandex_SSO/internal/grpcHandlers/auth"
+	grpcHandlersUsers "github.com/DenisBochko/yandex_SSO/internal/grpcHandlers/users"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

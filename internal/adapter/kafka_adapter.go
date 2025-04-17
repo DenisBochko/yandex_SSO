@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"yandex-sso/internal/domain/models"
-	"yandex-sso/pkg/kafka"
+	"github.com/DenisBochko/yandex_SSO/internal/domain/models"
+	"github.com/DenisBochko/yandex_SSO/pkg/kafka"
 
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"

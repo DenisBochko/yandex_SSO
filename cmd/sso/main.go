@@ -4,9 +4,9 @@ import (
 	"context"
 	"os/signal"
 	"syscall"
-	"yandex-sso/internal/app"
-	"yandex-sso/internal/config"
-	"yandex-sso/pkg/logger"
+	"github.com/DenisBochko/yandex_SSO/internal/app"
+	"github.com/DenisBochko/yandex_SSO/internal/config"
+	"github.com/DenisBochko/yandex_SSO/pkg/logger"
 
 	"go.uber.org/zap"
 )

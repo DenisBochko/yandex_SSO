@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"yandex-sso/internal/config"
-	"yandex-sso/internal/domain/models"
-	"yandex-sso/internal/storage"
+	"github.com/DenisBochko/yandex_SSO/internal/config"
+	"github.com/DenisBochko/yandex_SSO/internal/domain/models"
+	"github.com/DenisBochko/yandex_SSO/internal/storage"
 
 	"go.uber.org/zap"
 )

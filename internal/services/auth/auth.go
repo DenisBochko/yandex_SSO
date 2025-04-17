@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"yandex-sso/internal/config"
-	"yandex-sso/internal/domain/models"
-	"yandex-sso/internal/storage"
-	"yandex-sso/lib/jwt"
+
+	"github.com/DenisBochko/yandex_SSO/internal/config"
+	"github.com/DenisBochko/yandex_SSO/internal/domain/models"
+	"github.com/DenisBochko/yandex_SSO/internal/storage"
+	"github.com/DenisBochko/yandex_SSO/lib/jwt"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -149,45 +150,45 @@ func (a *Auth) Login(ctx context.Context, email string, password string) (string
 
 	log.Info("user logged in successfully", zap.String("userID", user.ID))
 
-	// Создаем access и refresh токен авторизации
+	// Создаем access токен авторизации
 	accessToken, err := jwt.NewToken(user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
 	if err != nil {
 		log.Error("failed to create access token", zap.Error(err))
 		return "", nil, "", nil, fmt.Errorf("failed to create access token: %w", err)
 	}
-
 	access_token_expires_at := durationToTimestamp(time.Now(), a.cfg.AccessTokenTTL)
 
-	refreshToken, err := jwt.NewToken(user, a.cfg.AppSecretRefreshToken, a.cfg.RefreshTokenTTL)
-	if err != nil {
-		log.Error("failed to create refresh token", zap.Error(err))
-		return "", nil, "", nil, fmt.Errorf("failed to create refresh token: %w", err)
+	// Создаем refresh токен авторизации и сохраняем в Redis
+	if err := a.redis.Set(user.ID, user); err != nil {
+		log.Error("failed to save user in redis", zap.Error(err))
+		return "", nil, "", nil, fmt.Errorf("failed to save user in redis: %w", err)
 	}
-
 	refresh_token_expires_at := durationToTimestamp(time.Now(), a.cfg.RefreshTokenTTL)
 
-	return accessToken, access_token_expires_at, refreshToken, refresh_token_expires_at, nil
+	return accessToken, access_token_expires_at, user.ID, refresh_token_expires_at, nil
 }
 
 func (a *Auth) RefreshToken(ctx context.Context, token string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error) {
 	// Проверяем валидность токена
-	claims, err := jwt.ValidateToken(token, a.cfg.AppSecretRefreshToken)
+	user, err := a.redis.Get(token)
 	if err != nil {
-		return "", nil, "", nil, fmt.Errorf("invalid token: %w", err)
-	}
-
-	user := models.User{
-		ID:    claims["uid"].(string),
-		Email: claims["email"].(string),
+		if errors.Is(err, storage.ErrKeyDoesNotExist) {
+			return "", nil, "", nil, storage.ErrKeyDoesNotExist
+		}
+		return "", nil, "", nil, fmt.Errorf("failed to get user from redis: %w", err)
 	}
 
 	// Создаем новый access токен
-	newAccessToken, err := jwt.NewToken(user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
+	newAccessToken, err := jwt.NewToken(*user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
 	if err != nil {
 		return "", nil, "", nil, fmt.Errorf("failed to create new token: %w", err)
 	}
-
 	access_token_expires_at := durationToTimestamp(time.Now(), a.cfg.AccessTokenTTL)
+
+	// Создаем refresh токен авторизации и сохраняем в Redis (новый токен перезатирает старый)
+	if err := a.redis.Set(user.ID, *user); err != nil {
+		return "", nil, "", nil, fmt.Errorf("failed to save user in redis: %w", err)
+	}
 	refresh_token_expires_at := durationToTimestamp(time.Now(), a.cfg.RefreshTokenTTL)
 
 	return newAccessToken, access_token_expires_at, token, refresh_token_expires_at, nil

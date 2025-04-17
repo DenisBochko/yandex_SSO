@@ -3,8 +3,8 @@ package users
 import (
 	"context"
 	"errors"
-	"yandex-sso/internal/domain/models"
-	"yandex-sso/internal/storage"
+	"github.com/DenisBochko/yandex_SSO/internal/domain/models"
+	"github.com/DenisBochko/yandex_SSO/internal/storage"
 
 	ssov1 "github.com/DenisBochko/yandex_contracts/gen/go/sso"
 	"google.golang.org/grpc"

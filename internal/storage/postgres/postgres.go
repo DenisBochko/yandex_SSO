@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"yandex-sso/internal/domain/models"
-	"yandex-sso/internal/storage"
+	"github.com/DenisBochko/yandex_SSO/internal/domain/models"
+	"github.com/DenisBochko/yandex_SSO/internal/storage"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

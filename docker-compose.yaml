@@ -112,18 +112,39 @@ services:
     networks:
       - sso-network
 
+  db2:
+    image: postgres:15
+    container_name: 2database2
+    environment:
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_USER: root
+      POSTGRES_DB: postgres
+    ports:
+      - "5440:5432"
+    restart: always
+    volumes:
+      - postgres2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    networks:
+      - sso-network
+
   redis:
     image: redis:latest
     container_name: redis
     environment:
       - REDIS_PASSWORD=admin
-      - REDIS_DB=0
+      - REDIS_DB=1
     ports:
       - "6379:6379"
     volumes:
       - ./redisdata:/data
+    command: ["redis-server", "--requirepass", "admin"]
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping"]
+      test: ["CMD", "redis-cli", "-a", "admin", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -160,6 +181,7 @@ services:
 
 volumes:
   postgres:
+  postgres2:
   minio_data:
   redisdata:
 
