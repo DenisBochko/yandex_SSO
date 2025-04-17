@@ -20,7 +20,7 @@ POSTGRES:
   POSTGRES_MAX_CONN: 10
   POSTGRES_MIN_CONN: 5
 
-minio:
+MINIO:
   MINIO_HOST: minio  # Имя сервиса в Docker Compose
   MINIO_PORT: 9000
   MINIO_USER: "minio"
@@ -28,9 +28,15 @@ minio:
   MINIO_BUCKET: "user-avatars"
   MINIO_SSLMODE: true
 
-kafka:
+KAFKA:
   KAFKA_BROKERS:
     - "kafka1:19092"
     - "kafka2:19093"
     - "kafka3:19094"
   KAFKA_TOPIC: "register"
+
+REDIS:
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_PASS: admin
+  REDIS_DB: 0

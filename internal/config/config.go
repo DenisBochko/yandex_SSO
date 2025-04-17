@@ -7,17 +7,19 @@ import (
 	"yandex-sso/pkg/kafka"
 	minio "yandex-sso/pkg/minIO"
 	"yandex-sso/pkg/postgres"
+	redisClient "yandex-sso/pkg/redis"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	Env      string               `yaml:"env" env-default:"local"`
-	Jwt      JwtConfig            `yaml:"jwt"`
-	GRPC     GRPCConfig           `yaml:"grpc"`
-	Postgres postgres.PostgresCfg `yaml:"POSTGRES"`
-	Minio    minio.MinioConfig    `yaml:"minio"`
-	Kafka    kafka.KafkaConfig    `yaml:"kafka"`
+	Env      string                     `yaml:"env" env-default:"local"`
+	Jwt      JwtConfig                  `yaml:"jwt"`
+	GRPC     GRPCConfig                 `yaml:"grpc"`
+	Postgres postgres.PostgresCfg       `yaml:"POSTGRES"`
+	Minio    minio.MinioConfig          `yaml:"MINIO"`
+	Kafka    kafka.KafkaConfig          `yaml:"KAFKA"`
+	Redis    redisClient.RedisClientCfg `yaml:"redis"`
 }
 
 type JwtConfig struct {

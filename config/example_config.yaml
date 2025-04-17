@@ -1,8 +1,8 @@
 env: "local" # prod
 
 jwt:
-  app_secret_a:  # секретный ключ для шифрования access токенов
-  app_secret_b:  # секретный ключ для шифрования refresh токенов
+  app_secret_a: "123" # секретный ключ для шифрования access токенов
+  app_secret_b: "123" # секретный ключ для шифрования refresh токенов
   access_token_ttl: 15m # время жизни access токена
   refresh_token_ttl: 720h # время жизни refresh токена
 
@@ -35,3 +35,9 @@ kafka:
     - "localhost:9093"
     - "localhost:9094"
   KAFKA_TOPIC: "register"
+
+REDIS:
+  REDIS_HOST: localhost
+  REDIS_PORT: 6379
+  REDIS_PASS: admin
+  REDIS_DB: 0

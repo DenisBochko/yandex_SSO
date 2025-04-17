@@ -112,6 +112,23 @@ services:
     networks:
       - sso-network
 
+  redis:
+    image: redis:latest
+    container_name: redis
+    environment:
+      - REDIS_PASSWORD=admin
+      - REDIS_DB=0
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
   sso_service:
     build:
       context: .
@@ -119,6 +136,8 @@ services:
     container_name: sso_service
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       minio:
         condition: service_started
@@ -142,6 +161,7 @@ services:
 volumes:
   postgres:
   minio_data:
+  redisdata:
 
 networks:
   sso-network:
