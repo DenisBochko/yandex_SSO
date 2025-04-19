@@ -2,10 +2,9 @@ package redisstorage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
-	"github.com/DenisBochko/yandex_SSO/internal/domain/models"
+
 	"github.com/DenisBochko/yandex_SSO/internal/storage"
 
 	"github.com/redis/go-redis/v9"
@@ -19,17 +18,12 @@ type RedisStorage struct {
 func New(client *redis.Client, ttl time.Duration) *RedisStorage {
 	return &RedisStorage{
 		client: client,
-		ttl: ttl,
+		ttl:    ttl,
 	}
 }
 
-func (r *RedisStorage) Set(uuid string, user models.User) error {
-	data, err := json.Marshal(user)
-	if err != nil {
-		return fmt.Errorf("failed to marshal json")
-	}
-
-	err = r.client.Set(context.Background(), uuid, data, r.ttl).Err()
+func (r *RedisStorage) Set(uuid string, userID string) error {
+	err := r.client.Set(context.Background(), uuid, userID, r.ttl).Err()
 	if err != nil {
 		return fmt.Errorf("failed to set value in redis: %w", err)
 	}
@@ -37,20 +31,13 @@ func (r *RedisStorage) Set(uuid string, user models.User) error {
 	return nil
 }
 
-func (r *RedisStorage) Get(uuid string) (*models.User, error) {
-	data, err := r.client.Get(context.Background(), uuid).Bytes()
-    if err == redis.Nil {
-        return nil, storage.ErrKeyDoesNotExist
-    } else if err != nil {
-        return nil, storage.ErrInternalStorage
-    }
-    
-	var user *models.User
-
-	err = json.Unmarshal(data, &user)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal json")
+func (r *RedisStorage) Get(uuid string) (string, error) {
+	userID, err := r.client.Get(context.Background(), uuid).Result()
+	if err == redis.Nil {
+		return "", storage.ErrKeyDoesNotExist
+	} else if err != nil {
+		return "", storage.ErrInternalStorage
 	}
 
-	return user, nil
+	return userID, nil
 }

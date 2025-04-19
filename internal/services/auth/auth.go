@@ -32,8 +32,8 @@ type KafkaTransport interface {
 }
 
 type RedisStorage interface {
-	Set(uuid string, user models.User) error
-	Get(uuid string) (*models.User, error)
+	Set(uuid string, userID string) error
+	Get(uuid string) (string, error)
 }
 
 type Storage interface {
@@ -41,6 +41,7 @@ type Storage interface {
 	User(ctx context.Context, email string) (models.User, error)
 	CreateVerificationToken(ctx context.Context, userID string, token string, expiresAt time.Time) (bool, error)
 	VerifyToken(ctx context.Context, token string) (bool, error)
+	UserById(ctx context.Context, id string) (models.User, error)
 }
 
 func New(
@@ -60,9 +61,10 @@ func New(
 }
 
 var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrUserExists         = errors.New("user already exists")
-	ErrRegistrationFailed = errors.New("registration failed")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrUserExists          = errors.New("user already exists")
+	ErrRegistrationFailed  = errors.New("registration failed")
+	ErrRefreshTokenExpired = errors.New("refresh token has expired")
 )
 
 // apiGateway.com/api/sso/verify?token=edea549f-8843-492e-ad8e-c11a62e3bdc5
@@ -159,39 +161,53 @@ func (a *Auth) Login(ctx context.Context, email string, password string) (string
 	access_token_expires_at := durationToTimestamp(time.Now(), a.cfg.AccessTokenTTL)
 
 	// Создаем refresh токен авторизации и сохраняем в Redis
-	if err := a.redis.Set(user.ID, user); err != nil {
+	refreshToken := uuid.New().String()
+
+	if err := a.redis.Set(refreshToken, user.ID); err != nil {
 		log.Error("failed to save user in redis", zap.Error(err))
 		return "", nil, "", nil, fmt.Errorf("failed to save user in redis: %w", err)
 	}
 	refresh_token_expires_at := durationToTimestamp(time.Now(), a.cfg.RefreshTokenTTL)
 
-	return accessToken, access_token_expires_at, user.ID, refresh_token_expires_at, nil
+	return accessToken, access_token_expires_at, refreshToken, refresh_token_expires_at, nil
 }
 
 func (a *Auth) RefreshToken(ctx context.Context, token string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error) {
-	// Проверяем валидность токена
-	user, err := a.redis.Get(token)
+	userID, err := a.redis.Get(token)
 	if err != nil {
 		if errors.Is(err, storage.ErrKeyDoesNotExist) {
-			return "", nil, "", nil, storage.ErrKeyDoesNotExist
+			return "", nil, "", nil, ErrRefreshTokenExpired
 		}
 		return "", nil, "", nil, fmt.Errorf("failed to get user from redis: %w", err)
 	}
 
+	user, err := a.storage.UserById(ctx, userID)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			a.log.Info("User not found")
+			return "", nil, "", nil, storage.ErrUserNotFound
+		}
+		a.log.Info("failed to get user", zap.Error(err))
+		return "", nil, "", nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
 	// Создаем новый access токен
-	newAccessToken, err := jwt.NewToken(*user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
+	newAccessToken, err := jwt.NewToken(user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
 	if err != nil {
 		return "", nil, "", nil, fmt.Errorf("failed to create new token: %w", err)
 	}
 	access_token_expires_at := durationToTimestamp(time.Now(), a.cfg.AccessTokenTTL)
 
-	// Создаем refresh токен авторизации и сохраняем в Redis (новый токен перезатирает старый)
-	if err := a.redis.Set(user.ID, *user); err != nil {
+	// Создаем refresh токен авторизации и сохраняем в Redis
+	refreshToken := uuid.New().String()
+
+	if err := a.redis.Set(refreshToken, user.ID); err != nil {
+		a.log.Error("failed to save user in redis", zap.Error(err))
 		return "", nil, "", nil, fmt.Errorf("failed to save user in redis: %w", err)
 	}
 	refresh_token_expires_at := durationToTimestamp(time.Now(), a.cfg.RefreshTokenTTL)
 
-	return newAccessToken, access_token_expires_at, token, refresh_token_expires_at, nil
+	return newAccessToken, access_token_expires_at, refreshToken, refresh_token_expires_at, nil
 }
 
 func (a *Auth) Verify(ctx context.Context, token string) (bool, error) {
