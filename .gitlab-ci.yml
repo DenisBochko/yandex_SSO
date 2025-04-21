@@ -4,16 +4,21 @@ stages:
 
 variables:
   GO_VERSION: "1.23.1"
-  COVERAGE_THRESHOLD: "30.0" # Порог покрытия кода для тестов
+  COVERAGE_THRESHOLD: "30.0"
 
-before_script:
-  - go version
-
-build:
-  stage: build
+default:
   image: golang:${GO_VERSION}
   variables:
     GIT_STRATEGY: clone
+  before_script:
+    - go version
+
+build:
+  stage: build
   script:
-    - ls -la    # Отладка: покажет структуру
+    - mkdir -p bin
+    - go mod vendor
     - go build -mod=vendor -o bin/sso ./cmd/sso/main.go
+  artifacts:
+    paths:
+      - bin/sso
