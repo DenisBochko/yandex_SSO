@@ -16,4 +16,4 @@ build:
     GIT_STRATEGY: clone
   script:
     - ls -la    # Отладка: покажет структуру
-    - CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o bin/sso ./cmd/sso/main.go
+    - go build -mod=vendor -o bin/sso ./cmd/sso/main.go
