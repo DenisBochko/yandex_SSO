@@ -12,9 +12,8 @@ before_script:
 build:
   stage: build
   image: golang:${GO_VERSION}
+  variables:
+    GIT_STRATEGY: clone
   script:
-    - CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o /app/bin/sso ./cmd/sso/main.go
-  artifacts:
-    paths:
-      - go.sum
-      - go.mod
+    - ls -la    # Отладка: покажет структуру
+    - CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o bin/sso ./cmd/sso/main.go
