@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	ssov1 "github.com/DenisBochko/yandex_contracts/gen/go/sso"
+	ssov1 "gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts/gen/go/sso"
 	"google.golang.org/grpc"
 )
 

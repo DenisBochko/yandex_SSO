@@ -7,7 +7,7 @@ import (
 	"github.com/DenisBochko/yandex_SSO/internal/services/auth"
 	"github.com/DenisBochko/yandex_SSO/internal/storage"
 
-	ssov1 "github.com/DenisBochko/yandex_contracts/gen/go/sso"
+	ssov1 "gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts/gen/go/sso"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,6 +19,7 @@ type Auth interface {
 	Register(ctx context.Context, name string, email string, password string) (string, error)
 	RefreshToken(ctx context.Context, token string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error)
 	Verify(ctx context.Context, token string) (bool, error)
+	Logut(ctx context.Context, refreshToken string) (bool, error)
 }
 
 type AuthServerAPI struct {
@@ -97,7 +98,7 @@ func (s *AuthServerAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshToke
 	return &ssov1.RefreshTokenResponse{
 		AccessToken:           accessToken,
 		AccessTokenExpiresAt:  accessTokenExpiresAt,
-		RefreshToken:          refreshToken, // возвращаем такой же refresh token
+		RefreshToken:          refreshToken, 
 		RefreshTokenExpiresAt: refreshTokenExpiresAt,
 	}, nil
 }
@@ -120,5 +121,24 @@ func (s *AuthServerAPI) Verify(ctx context.Context, req *ssov1.VerifyRequest) (*
 
 	return &ssov1.VerifyResponse{
 		IsValid: isValid,
+	}, nil
+}
+
+func (s *AuthServerAPI) Logout(ctx context.Context, req *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
+	if req.RefreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
+	}
+
+	isOk, err := s.auth.Logut(ctx, req.RefreshToken)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	if !isOk {
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	return &ssov1.LogoutResponse{
+		Status: "OK",
 	}, nil
 }

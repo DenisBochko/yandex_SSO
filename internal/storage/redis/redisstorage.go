@@ -41,3 +41,11 @@ func (r *RedisStorage) Get(uuid string) (string, error) {
 
 	return userID, nil
 }
+
+func (r *RedisStorage) Delete(uuid string) error {
+	err := r.client.Del(context.Background(), uuid).Err()
+	if err != nil {
+		return fmt.Errorf("failed to delete value from redis: %w", err)
+	}
+	return nil
+}

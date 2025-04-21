@@ -34,6 +34,7 @@ type KafkaTransport interface {
 type RedisStorage interface {
 	Set(uuid string, userID string) error
 	Get(uuid string) (string, error)
+	Delete(uuid string) error
 }
 
 type Storage interface {
@@ -191,6 +192,11 @@ func (a *Auth) RefreshToken(ctx context.Context, token string) (string, *timesta
 		return "", nil, "", nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
+	// удаляем старый токен из редис
+	if err := a.redis.Delete(token); err != nil {
+		return "", nil, "", nil, fmt.Errorf("failed to delete user from redis: %w", err)
+	}
+
 	// Создаем новый access токен
 	newAccessToken, err := jwt.NewToken(user, a.cfg.AppSecretAccessToken, a.cfg.AccessTokenTTL)
 	if err != nil {
@@ -227,6 +233,23 @@ func (a *Auth) Verify(ctx context.Context, token string) (bool, error) {
 
 	if !ok {
 		return false, fmt.Errorf("token not found: %w", err)
+	}
+
+	return true, nil
+}
+
+func (a *Auth) Logut(ctx context.Context, refreshToken string) (bool, error) {
+	_, err := a.redis.Get(refreshToken)
+	if err != nil {
+		if errors.Is(err, storage.ErrKeyDoesNotExist) {
+			return false, ErrRefreshTokenExpired
+		}
+		return false, fmt.Errorf("failed to get user from redis: %w", err)
+	}
+
+	if err := a.redis.Delete(refreshToken); err != nil {
+		a.log.Info("failed to delete user from redis")
+		return false, fmt.Errorf("failed to delete user from redis: %w", err)
 	}
 
 	return true, nil

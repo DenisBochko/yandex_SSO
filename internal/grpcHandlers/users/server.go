@@ -3,10 +3,11 @@ package users
 import (
 	"context"
 	"errors"
+
 	"github.com/DenisBochko/yandex_SSO/internal/domain/models"
 	"github.com/DenisBochko/yandex_SSO/internal/storage"
 
-	ssov1 "github.com/DenisBochko/yandex_contracts/gen/go/sso"
+	ssov1 "gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts/gen/go/sso"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -48,9 +49,9 @@ func (u *UsersServerAPI) GetUserById(ctx context.Context, req *ssov1.GetUserById
 
 	return &ssov1.GetUserByIdResponse{
 		User: &ssov1.User{
-			UserId: user.ID,
-			Name:   user.Name,
-			Email:  user.Email,
+			UserId:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
 			AvatarUrl: user.Avatar,
 		},
 	}, nil
