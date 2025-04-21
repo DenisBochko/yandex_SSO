@@ -1,6 +1,6 @@
-**Разделям grpc методы по Auth, User**
+# Разделям grpc методы по Auth, User
 
-#### для ручки uploadAvatar
+## для ручки uploadAvatar
 
 {
     "content_type": "image/jpeg",
