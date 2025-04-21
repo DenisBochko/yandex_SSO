@@ -7,6 +7,8 @@ variables:
   COVERAGE_THRESHOLD: "30.0" # Порог покрытия кода для тестов
 
 before_script:
+  - git config --global url."https://$GIT_USER:$GIT_TOKEN@gitlab.crja72.ru/".insteadOf "https://gitlab.crja72.ru/"
+  - go mod tidy
   - go version
 
 build:
@@ -16,4 +18,4 @@ build:
     GIT_STRATEGY: clone
   script:
     - ls -la    # Отладка: покажет структуру
-    - go build -mod=vendor -o bin/sso ./cmd/sso/main.go
+    - go build -o bin/sso ./cmd/sso/main.go
