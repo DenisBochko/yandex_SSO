@@ -1,8 +1,8 @@
 env: "prod"  # или "prod" для продакшена
 
 jwt:
-  app_secret_a: ""
-  app_secret_b: ""
+  app_secret_a: "1YAJoxPSVW-W26tGD4x3WRCBW3-px2PQfUbZqzR8YC8"
+  app_secret_b: "1YAJoxPSVW-W26tGD4x3WRCBW3-px2PQfUbZqzR8YC8"
   access_token_ttl: "15m"
   refresh_token_ttl: "720h"
 

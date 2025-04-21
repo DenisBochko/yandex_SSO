@@ -118,7 +118,7 @@ services:
     environment:
       POSTGRES_PASSWORD: 1234
       POSTGRES_USER: root
-      POSTGRES_DB: postgres
+      POSTGRES_DB: users
     ports:
       - "5440:5432"
     restart: always
@@ -150,34 +150,34 @@ services:
       retries: 5
     restart: unless-stopped
 
-  sso_service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: sso_service
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_started
-      kafka1:
-        condition: service_started
-      kafka2:
-        condition: service_started
-      kafka3:
-        condition: service_started
+  # sso_service:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: sso_service
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_started
+  #     kafka1:
+  #       condition: service_started
+  #     kafka2:
+  #       condition: service_started
+  #     kafka3:
+  #       condition: service_started
       
-    ports:
-      - "50051:50051"
-    volumes:
-      - ./config:/app/config
-    environment:
-      CONFIG_PATH: /app/config/docker_config.yaml
-    networks:
-      - sso-network
-    restart: unless-stopped
+  #   ports:
+  #     - "50051:50051"
+  #   volumes:
+  #     - ./config:/app/config
+  #   environment:
+  #     CONFIG_PATH: /app/config/docker_config.yaml
+  #   networks:
+  #     - sso-network
+  #   restart: unless-stopped
 
 volumes:
   postgres:
