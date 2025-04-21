@@ -18,7 +18,7 @@ func SetupLogger(env string) *zap.Logger {
 		config := zap.NewDevelopmentConfig()
 		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder        // Читаемая временная метка
 		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder // Цветные уровни логов
-		config.EncoderConfig.EncodeCaller = zapcore.FullCallerEncoder       // Длинный путь к файлу
+		config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder      // Длинный путь к файлу
 		config.OutputPaths = []string{"stderr"}
 
 		logger, _ = config.Build()
