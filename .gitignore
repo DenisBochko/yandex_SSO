@@ -2,3 +2,5 @@ config/config.yaml
 data
 redisdata
 kafka_data
+.netrc
+vendor

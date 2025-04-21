@@ -8,13 +8,12 @@ variables:
 
 before_script:
   - go version
-  - go mod tidy
 
 build:
   stage: build
   image: golang:${GO_VERSION}
   script:
-    - go build -o /app/bin/sso ./cmd/sso/main.go
+    - CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o /app/bin/sso ./cmd/sso/main.go
   artifacts:
     paths:
       - go.sum
