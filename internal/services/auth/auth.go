@@ -126,6 +126,43 @@ func (a *Auth) Register(ctx context.Context, name string, email string, pass str
 	return id, nil
 }
 
+func (a *Auth) ResendVerificationToken(ctx context.Context, user_id string) (string, error) {
+	user, err := a.storage.UserById(ctx, user_id)
+	if err != nil {
+		return "failed", err
+	}
+
+	// Создаем верификационный токен для пользователя
+	verificationToken := uuid.NewString()
+	expiresAt := time.Now().Add(10 * time.Minute).UTC()
+
+	ok, err := a.storage.CreateVerificationToken(ctx, user.ID, verificationToken, expiresAt)
+	if err != nil {
+		a.log.Error("failed to create verification token", zap.Error(err))
+		return "failed", fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	if !ok {
+		a.log.Error("failed to create verification token", zap.String("userID", user.ID))
+		return "failed", fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	// Отправляем сообщение в Kafka
+	message := models.VerificationUserMessage{
+		UserID: user.ID,
+		Name:   user.Name,
+		Email:  user.Email,
+		Token:  verificationToken,
+	}
+
+	if err := a.kafkaTransport.SendVerificationUserMessage(ctx, message); err != nil {
+		a.log.Error("failed to send verification message", zap.Error(err))
+		return "failed", fmt.Errorf("failed to send verification message: %w", err)
+	}
+
+	return "OK", nil
+}
+
 // Login checks if user with given credentials exists in the system and returns access token.
 //
 // If user exists, but password is incorrect, returns error.

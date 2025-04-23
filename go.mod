@@ -13,7 +13,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.90
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/stretchr/testify v1.10.0
-	gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts v0.0.17
+	gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts v0.0.19
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.36.0
 	google.golang.org/grpc v1.71.1

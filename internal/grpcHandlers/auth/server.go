@@ -17,6 +17,7 @@ import (
 type Auth interface {
 	Login(ctx context.Context, email string, password string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error)
 	Register(ctx context.Context, name string, email string, password string) (string, error)
+	ResendVerificationToken(ctx context.Context, user_id string) (string, error)
 	RefreshToken(ctx context.Context, token string) (string, *timestamppb.Timestamp, string, *timestamppb.Timestamp, error)
 	Verify(ctx context.Context, token string) (bool, error)
 	Logut(ctx context.Context, refreshToken string) (bool, error)
@@ -50,6 +51,21 @@ func (s *AuthServerAPI) Register(ctx context.Context, req *ssov1.RegisterRequest
 
 	return &ssov1.RegisterResponse{
 		UserId: userID,
+	}, nil
+}
+
+func (s *AuthServerAPI) ResendVerificationToken(ctx context.Context, req *ssov1.ResendVerificationTokenRequest) (*ssov1.ResendVerificationTokenResponse, error) {
+	if req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "userId is required")
+	}
+
+	respStatus, err := s.auth.ResendVerificationToken(ctx, req.GetUserId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "resend verification tocken failed")
+	}
+
+	return &ssov1.ResendVerificationTokenResponse{
+		Status: respStatus,
 	}, nil
 }
 
@@ -98,7 +114,7 @@ func (s *AuthServerAPI) RefreshToken(ctx context.Context, req *ssov1.RefreshToke
 	return &ssov1.RefreshTokenResponse{
 		AccessToken:           accessToken,
 		AccessTokenExpiresAt:  accessTokenExpiresAt,
-		RefreshToken:          refreshToken, 
+		RefreshToken:          refreshToken,
 		RefreshTokenExpiresAt: refreshTokenExpiresAt,
 	}, nil
 }

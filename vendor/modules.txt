@@ -221,7 +221,7 @@ github.com/rs/xid
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/require
-# gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts v0.0.17
+# gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts v0.0.19
 ## explicit; go 1.23.1
 gitlab.crja72.ru/golang/2025/spring/course/projects/go6/contracts/gen/go/sso
 # go.uber.org/atomic v1.7.0
