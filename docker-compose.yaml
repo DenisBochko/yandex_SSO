@@ -13,8 +13,6 @@ services:
       - kafka1
       - kafka2
       - kafka3
-    networks:
-      - sso-network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -23,8 +21,6 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-    networks:
-      - sso-network
 
   kafka1:
     container_name: kafka1
@@ -40,8 +36,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-    networks:
-      - sso-network
 
   kafka2:
     image: confluentinc/cp-kafka:7.6.0
@@ -57,8 +51,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-    networks:
-      - sso-network
 
   kafka3:
     image: confluentinc/cp-kafka:7.6.0
@@ -74,8 +66,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-    networks:
-      - sso-network
   
   minio:
     image: minio/minio
@@ -89,8 +79,6 @@ services:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
     command: server --console-address ":9001" /data
-    networks:
-      - sso-network
   
   db:
     image: postgres:15
@@ -109,8 +97,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 3
-    networks:
-      - sso-network
 
   db2:
     image: postgres:15
@@ -129,8 +115,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 3
-    networks:
-      - sso-network
 
   redis:
     image: redis:latest
@@ -150,32 +134,32 @@ services:
       retries: 5
     restart: unless-stopped
 
-  sso_service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: sso_service
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_started
-      kafka1:
-        condition: service_started
-      kafka2:
-        condition: service_started
-      kafka3:
-        condition: service_started
+  # sso_service:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: sso_service
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_started
+  #     kafka1:
+  #       condition: service_started
+  #     kafka2:
+  #       condition: service_started
+  #     kafka3:
+  #       condition: service_started
       
-    ports:
-      - "50051:50051"
-    volumes:
-      - ./config:/app/config
-    environment:
-      CONFIG_PATH: /app/config/docker_config.yaml
-    restart: unless-stopped
+  #   ports:
+  #     - "50051:50051"
+  #   volumes:
+  #     - ./config:/app/config
+  #   environment:
+  #     CONFIG_PATH: /app/config/docker_config.yaml
+  #   restart: unless-stopped
 
 volumes:
   postgres:
